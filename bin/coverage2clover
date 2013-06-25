@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+# coding: utf-8
+from optparse import OptionParser
+import sys
+from bamboo import coverage
+
+#
+# Конвертирует xml-отчет, предоставляемый coverage.py,
+# в формат xml-отчета Atlassian Clover
+#
+parser = OptionParser()
+parser.add_option("-i", "--input-file", dest="inputfile", default=None,
+                  help="read coverage report from FILE", metavar="FILE")
+parser.add_option("-o", "--output-file", dest="outputfile", default=None,
+                  help="write clover report to FILE", metavar="FILE")
+
+options, args = parser.parse_args()
+inputfile = options.inputfile or sys.stdin
+outputfile = options.outputfile or sys.stdout
+cov = coverage.Cobertura()
+cov.open(inputfile)
+cl = coverage.Clover(cov)
+cl.export(outputfile)

@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+
+from optparse import OptionParser
+import sys
+from bamboo.make import MakeRunner
+
+parser = OptionParser(usage='%prog [options] <project_name>')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-d", "--deploy", dest="deploy", help="install type",
+                  choices=('devel', 'test', 'production', 'tools'))
+parser.add_option("-s", "--sources", dest="sources", default=None,
+                  help="project sources directory")
+parser.add_option("-l", "--local-virtualenv", dest="local_venv", default=False,
+                  action="store_true", help="create virtualenv in local dir")
+
+options, args = parser.parse_args()
+if len(args) < 1:
+    if options.deploy != 'tools':
+        parser.print_usage()
+        sys.exit(-1)
+    else:
+        args = ('bamboo',)
+if args[0] == 'help':
+    parser.print_help()
+    sys.exit()
+runner = MakeRunner(args[0], configfile=options.configfile,
+                    sources=options.sources, local_venv=options.local_venv)
+
+if options.deploy == 'production':
+    runner.install_production()
+if options.deploy == 'devel':
+    runner.install_devel()
+if options.deploy == 'test':
+    runner.install_test()
+if options.deploy == 'tools':
+    runner.install_test_tools()
