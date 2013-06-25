@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# $Id: $
+
+
+from optparse import OptionParser
+import sys
+from bamboo.make import MakeRunner
+
+parser = OptionParser(usage='%prog [options] <project_name>')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-t", "--type", dest="type", help="tests type",
+                  choices=('django', 'twisted', 'unittests'))
+parser.add_option("-o", "--with-coverage", dest="coverage", default=False,
+                  action="store_true", help="run tests with coverage")
+parser.add_option("-s", "--sources", dest="sources", default=None,
+                  help="project sources directory")
+parser.add_option("-l", "--local-virtualenv", dest="local_venv", default=False,
+                  action="store_true", help="create virtualenv in local dir")
+
+options, args = parser.parse_args()
+if len(args) < 1:
+    parser.print_usage()
+    sys.exit(-1)
+if args[0] == 'help':
+    parser.print_help()
+    sys.exit()
+runner = MakeRunner(args[0], configfile=options.configfile,
+                    sources=options.sources, local_venv=options.local_venv)
+
+if options.type == 'django':
+    runner.run_django_tests(coverage=options.coverage)
+

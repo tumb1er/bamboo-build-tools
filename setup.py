@@ -10,7 +10,8 @@ setup(
     author_email='stikhonov@rutube.ru',
     scripts=[
         'bin/coverage2clover',
-        'bin/bbt-deploy'
+        'bin/bbt-deploy',
+        'bin/bbt-test',
     ],
     package_data={'bamboo': ['Makefile']},
     description='python build tools for Atlassian Bamboo',
