@@ -83,7 +83,7 @@ class MakeRunner(object):
 
     def make_args(self, target):
         make_args = (
-            'make',
+            self.make,
             target,
             '-f',
             self.makefile,
