@@ -18,6 +18,7 @@ class SVNHelper(object):
     """ Работа с JIRA-задачами в SVN."""
 
     stable_dir = 'branches/stable'
+    tags_dir = 'tags/release'
     commit_message_filename = 'commit-message.txt'
 
     def __init__(self, project_key, configfile='bamboo.cfg', root='^'):
@@ -78,14 +79,7 @@ class SVNHelper(object):
         stdout, stderr = p.communicate()
         return stdout, stderr, p.returncode
 
-    def create_stable(self, stable, task, branch=None, interactive=False):
-        stable_path = os.path.join(self.project_root, self.stable_dir, stable)
-        args = ('info', stable_path)
-        cerr("Checking stable existance")
-        stdout, stderr, return_code = self.execute(args)
-        if return_code == 0:
-            cerr("Stable already exists")
-            return
+    def compute_stable_source(self, stable):
         parts = stable.split('.')
         if parts[1] == 'x':
             source = os.path.join(self.project_root, 'trunk')
@@ -99,30 +93,91 @@ class SVNHelper(object):
                                   '%s.%s.x' % (parts[0], parts[1]))
             cerr("Sub-minor stable %s assumed created from %s" % (
                 stable, source))
+        return source
+
+    def check_dir_exists(self, path):
+        args = ('info', path)
+        cerr("Checking existance of %s" % path)
+        stdout, stderr, return_code = self.execute(args, quiet=True)
+        if return_code == 0:
+            return True
+
+    def svn_copy(self, source, destination, task, message=None,
+                 interactive=False):
+        message = message or '%s copy %s to %s' % (task, source, destination)
+        args = ('cp', source, destination, '-m', message)
+        if interactive:
+            self.confirm_execution(args)
+        cerr("Copying %s to %s" % (source, destination))
+        stdout, stderr, return_code = self.execute(args)
+        if return_code != 0:
+            raise SVNError(stderr)
+
+    def create_stable(self, stable, task, branch=None, interactive=False):
+        stable_path = os.path.join(self.project_root, self.stable_dir)
+        if not self.check_dir_exists(stable_path):
+            self.makedir(stable_path, interactive=interactive)
+        stable_path = os.path.join(stable_path, stable)
+        if self.check_dir_exists(stable_path):
+            cerr("Stable already exists")
+            return
+
+        source = self.compute_stable_source(stable)
         if branch:
             cerr('Source overriden from command line: %s' % branch)
             source = branch
         if not source.endswith('trunk'):
-            cerr("Checking source existance")
-            args = ('info', source)
-            stdout, stderr, return_code = self.execute(args)
-            if return_code != 0:
+            if not self.check_dir_exists(source):
                 raise SVNError("Source for stable does not exists")
+        msg = '%s creating stable %s' % (task, stable)
+        self.svn_copy(source, stable_path, task, message=msg,
+                      interactive=interactive)
 
-        args = (
-            'cp',
-            source,
-            stable_path,
-            '-m',
-            '"%s - create stable %s"' % (task, stable)
-        )
+    def revert_working_copy(self):
+        cerr('Cleaning working copy')
+        args = ('revert', '-R', '.')
+        stdout, stderr, return_code = self.execute(args)
+        if return_code != 0:
+            raise SVNError(stderr)
+
+    def svn_update(self):
+        cerr('Updating from SVN')
+        args = ('up',)
+        stdout, stderr, return_code = self.execute(args)
+        if return_code != 0:
+            raise SVNError(stderr)
+
+    def check_collected_tasks(self, collected, tasks,
+                              not_found_msg='These tasks not found in SVN log:',
+                              found_msg='collected tasks:'):
+        not_found = set(tasks) - set(collected)
+        if not_found:
+            cerr(not_found_msg, ','.join(not_found))
+            cerr(found_msg, ','.join(collected))
+            raise SVNError('not all tasks collected')
+
+    def check_for_conflicts(self):
+        cerr('Checking merge result')
+        args = ('st',)
+        stdout, stderr, return_code = self.execute(args)
+        for line in stdout.splitlines():
+            if 'C' in line[:8]:
+                raise SVNError('Conflict found')
+        if return_code != 0:
+            raise SVNError(stderr)
+
+    def confirm_execution(self, args):
+        cerr('SVN command:')
+        cerr('svn ' + ' '.join(args))
+        if not query_yes_no('commit?', default='yes'):
+            cerr('Aborted')
+            sys.exit(0)
+
+    def svn_commit(self, interactive):
+        args = ('ci', '-F', self.commit_message_filename)
         if interactive:
-            cerr('SVN command:')
-            cerr('svn ' + ' '.join(args))
-            if not query_yes_no('commit?', default='yes'):
-                cerr('Aborted')
-                sys.exit(0)
-        cerr("Copying files to stable dir")
+            self.confirm_execution(args)
+        cerr("Committing merge to SVN")
         stdout, stderr, return_code = self.execute(args)
         if return_code != 0:
             raise SVNError(stderr)
@@ -130,16 +185,8 @@ class SVNHelper(object):
     def merge_tasks(self, task_key, tasks, branch='trunk', interactive=False):
         if not tasks:
             raise ValueError('No tasks requested')
-        cerr('Cleaning working copy')
-        args = ('revert', '-R', '.')
-        stdout, stderr, return_code = self.execute(args)
-        if return_code != 0:
-            raise SVNError(stderr)
-        cerr('Updating from SVN')
-        args = ('up',)
-        stdout, stderr, return_code = self.execute(args)
-        if return_code != 0:
-            raise SVNError(stderr)
+        self.revert_working_copy()
+        self.svn_update()
         with open(self.commit_message_filename, 'w+') as commit_msg_file:
             commit_msg_file.write(
                 '%s merge tasks %s\n' % (task_key, ','.join(tasks)))
@@ -147,11 +194,7 @@ class SVNHelper(object):
             commit_msg_file.write('Request revisions from %s:\n' % source)
             logged = self.log_tasks(None, branch=source)
             collected = ['%s-%s' % (self.project_key, t) for t in logged.keys()]
-            not_found = set(tasks) - set(collected)
-            if not_found:
-                cerr('These tasks not found in SVN log:', ','.join(not_found))
-                cerr('collected tasks:', ','.join(collected))
-                raise SVNError('not all tasks collected')
+            self.check_collected_tasks(collected, tasks)
             cerr('Merging with svn merge --non-interactive -c $REV')
             revisions = []
             for t, revs in logged.items():
@@ -159,12 +202,10 @@ class SVNHelper(object):
                     revisions.append((r, t, msg))
             revisions = sorted(revisions, key=lambda item: item[0])
             for r, t, msg in revisions:
-                jira_task = '%s-%s' %(self.project_key, t)
+                jira_task = '%s-%s' % (self.project_key, t)
                 if jira_task not in tasks:
                     continue
-                commit_msg_file.write(
-                    'r%s %s %s\n' % (r, jira_task, msg))
-
+                commit_msg_file.write('r%s %s %s\n' % (r, jira_task, msg))
                 args = ('merge', '--non-interactive', '-c', 'r%s' % r, source)
                 self.execute(args, quiet=True)
             commit_msg_file.flush()
@@ -175,32 +216,43 @@ class SVNHelper(object):
                 if not m:
                     continue
                 merged.append(m.group(1))
-            not_merged = set(tasks) - set(merged)
-            if not_merged:
-                cerr('These tasks not merged:', ','.join(not_merged))
-                cerr('Merged tasks:', ','.join(merged))
-                raise SVNError('not all tasks merged')
+            self.check_collected_tasks(merged, tasks,
+                                       not_found_msg='These tasks not merged:',
+                                       found_msg='Merged tasks:')
 
-        cerr('Checking merge result')
-        args = ('st',)
-        stdout, stderr, return_code = self.execute(args)
-        for line in stdout.splitlines():
-            if 'C' in line[:8]:
-                raise SVNError('Conflict found')
-        if return_code != 0:
-            raise SVNError(stderr)
+        self.check_for_conflicts()
 
-        args = ('ci', '-F', self.commit_message_filename)
+        self.svn_commit(interactive)
+
+    def release(self, task_key, release, interactive=False):
+        cerr("Checking for tags dir existance")
+        tags_dir = os.path.join(self.project_root, self.tags_dir, release)
+        if not self.check_dir_exists(tags_dir):
+            cerr("Creating tags dir")
+            self.makedir(tags_dir, interactive=interactive)
+        args = ('ls', tags_dir)
+        stdout, stderr, return_code = self.execute(args, quiet=True)
+        tags = stdout.splitlines()
+        last_tag = 0 if not tags else int(tags[-1].strip('/'))
+        new_tag = '%02d' % (last_tag + 1)
+        tag = os.path.join(tags_dir, new_tag)
+        stable = self.compute_stable(release)
+        msg = '%s create tag %s-%s' % (task_key, release, new_tag)
+        self.svn_copy(stable, tag, task_key, message=msg,
+                      interactive=interactive)
+
+    def makedir(self, path, interactive=False):
+        args = ('mkdir', '--parents', path, '')
         if interactive:
-            cerr('SVN command:')
-            cerr('svn ' + ' '.join(args))
-            if not query_yes_no('commit?', default='yes'):
-                cerr('Aborted')
-                sys.exit(0)
-        cerr("Committing merge to SVN")
+            self.confirm_execution(args)
         stdout, stderr, return_code = self.execute(args)
         if return_code != 0:
             raise SVNError(stderr)
+
+    def compute_stable(self, release):
+        stable = release.replace('0', 'x')
+        stable = re.sub(r'x\.(x|[\d]+)$', 'x', stable)
+        return os.path.join(self.project_root, self.stable_dir, stable)
 
 
 
