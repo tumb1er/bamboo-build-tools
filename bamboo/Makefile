@@ -59,7 +59,9 @@ SETTINGS_LOCAL=settings_local_$(PROJECT_NAME).py
 MANAGE_SCRIPT=./manage.py
 
 # Аргументы запуска coverage
-COVERAGE_ARGS:= --branch --source=$(WORKING_DIR) --omit="*/migrations/*,*/virtualenv/*"
+COVERAGE_ARGS:= --branch --source=$(WORKING_DIR) --omit=$(VENV_DIR)/*
+
+REPORT_ARGS= --omit=*migrations*
 
 # Аргументы запуска nosetests
 NOSE_ARGS:= --verbosity=0 --with-xunit
@@ -189,7 +191,7 @@ coverage-django-tests: clean-reports report-dir
 	$(ACTIVATE); $(COVERAGE_CMD) $(MANAGE_CMD) $(QUITE_CMD)
 	coverage combine
 	coverage xml -o $(COVERAGE_XML)
-	coverage html -d $(COVERAGE_HTML)
+	coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
 	coverage2clover -i $(COVERAGE_XML) -o $(CLOVER_XML)
 
 run-django-tests:
