@@ -184,7 +184,7 @@ rcscripts:
 # Процесс тестирования
 # --------------------
 
-coverage-django-tests: report-dir clean-reports
+coverage-django-tests: clean-reports report-dir
 	echo "Running Django tests with coverage"
 	$(ACTIVATE); $(COVERAGE_CMD) $(MANAGE_CMD) $(QUITE_CMD)
 	coverage combine
