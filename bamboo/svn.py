@@ -5,6 +5,7 @@
 
 import os.path
 import re
+import shutil
 from subprocess import Popen, PIPE
 import sys
 from bamboo.helpers import cout, cerr, query_yes_no
@@ -24,6 +25,7 @@ class SVNHelper(object):
     def __init__(self, project_key, configfile='bamboo.cfg', root='^'):
         self.project_key = project_key
         self.project_root = root
+        self.repo_url = 'http://y.rutube.ru/vrepo/'
         self.parse_config(configfile)
 
     def parse_config(self, configfile):
@@ -41,7 +43,7 @@ class SVNHelper(object):
             args += ('-l', '100')
         args += (branch,)
         cerr("Running svn client")
-        stdout, stderr, return_code = self.execute(args)
+        stdout, stderr, return_code = self.svn(args)
         cerr("Collecting tasks")
         if return_code != 0:
             raise SVNError(stderr)
@@ -71,13 +73,9 @@ class SVNHelper(object):
             revisions = map(lambda item: str(item[0]), sorted(tasks[task]))
             cout('%s-%s: %s' % (self.project_key, task, ','.join(revisions)))
 
-    def execute(self, args, quiet=False):
+    def svn(self, args, quiet=False):
         args = ('/usr/bin/env', 'svn') + args
-        if not quiet:
-            sys.stderr.write(' '.join(args[1:]) + '\n')
-        p = Popen(args, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        return stdout, stderr, p.returncode
+        return self.execute(args, quiet)
 
     def compute_stable_source(self, stable):
         parts = stable.split('.')
@@ -98,7 +96,7 @@ class SVNHelper(object):
     def check_dir_exists(self, path):
         args = ('info', path)
         cerr("Checking existance of %s" % path)
-        stdout, stderr, return_code = self.execute(args, quiet=True)
+        stdout, stderr, return_code = self.svn(args, quiet=True)
         if return_code == 0:
             return True
 
@@ -109,7 +107,7 @@ class SVNHelper(object):
         if interactive:
             self.confirm_execution(args)
         cerr("Copying %s to %s" % (source, destination))
-        stdout, stderr, return_code = self.execute(args)
+        stdout, stderr, return_code = self.svn(args)
         if return_code != 0:
             raise SVNError(stderr)
 
@@ -136,14 +134,14 @@ class SVNHelper(object):
     def revert_working_copy(self):
         cerr('Cleaning working copy')
         args = ('revert', '-R', '.')
-        stdout, stderr, return_code = self.execute(args)
+        stdout, stderr, return_code = self.svn(args)
         if return_code != 0:
             raise SVNError(stderr)
 
     def svn_update(self):
         cerr('Updating from SVN')
         args = ('up',)
-        stdout, stderr, return_code = self.execute(args)
+        stdout, stderr, return_code = self.svn(args)
         if return_code != 0:
             raise SVNError(stderr)
 
@@ -159,7 +157,7 @@ class SVNHelper(object):
     def check_for_conflicts(self):
         cerr('Checking merge result')
         args = ('st',)
-        stdout, stderr, return_code = self.execute(args)
+        stdout, stderr, return_code = self.svn(args)
         for line in stdout.splitlines():
             if 'C' in line[:8]:
                 raise SVNError('Conflict found')
@@ -178,7 +176,7 @@ class SVNHelper(object):
         if interactive:
             self.confirm_execution(args)
         cerr("Committing merge to SVN")
-        stdout, stderr, return_code = self.execute(args)
+        stdout, stderr, return_code = self.svn(args)
         if return_code != 0:
             raise SVNError(stderr)
 
@@ -207,7 +205,7 @@ class SVNHelper(object):
                     continue
                 commit_msg_file.write('r%s %s %s\n' % (r, jira_task, msg))
                 args = ('merge', '--non-interactive', '-c', 'r%s' % r, source)
-                self.execute(args, quiet=True)
+                self.svn(args, quiet=True)
             commit_msg_file.flush()
             commit_msg_file.seek(0)
             merged = []
@@ -224,18 +222,22 @@ class SVNHelper(object):
 
         self.svn_commit(interactive)
 
-    def release(self, task_key, release, interactive=False):
-        cerr("Checking for tags dir existance")
-        tags_dir = os.path.join(self.project_root, self.tags_dir, release)
-        if not self.check_dir_exists(tags_dir):
-            cerr("Creating tags dir")
-            self.makedir(tags_dir, interactive=interactive)
+    def get_last_tag(self, tags_dir):
         args = ('ls', tags_dir)
-        stdout, stderr, return_code = self.execute(args, quiet=True)
+        stdout, stderr, return_code = self.svn(args, quiet=True)
         tags = stdout.splitlines()
         last_tag = 0 if not tags else int(tags[-1].strip('/'))
+        return last_tag
+
+    def release(self, task_key, release, interactive=False):
+        cerr("Checking for tags dir existance")
+        released_tags = os.path.join(self.project_root, self.tags_dir, release)
+        if not self.check_dir_exists(released_tags):
+            cerr("Creating tags dir")
+            self.makedir(released_tags, interactive=interactive)
+        last_tag = self.get_last_tag(released_tags)
         new_tag = '%02d' % (last_tag + 1)
-        tag = os.path.join(tags_dir, new_tag)
+        tag = os.path.join(released_tags, new_tag)
         stable = self.compute_stable(release)
         msg = '%s create tag %s-%s' % (task_key, release, new_tag)
         self.svn_copy(stable, tag, task_key, message=msg,
@@ -245,7 +247,7 @@ class SVNHelper(object):
         args = ('mkdir', '--parents', path, '')
         if interactive:
             self.confirm_execution(args)
-        stdout, stderr, return_code = self.execute(args)
+        stdout, stderr, return_code = self.svn(args)
         if return_code != 0:
             raise SVNError(stderr)
 
@@ -254,5 +256,56 @@ class SVNHelper(object):
         stable = re.sub(r'x\.(x|[\d]+)$', 'x', stable)
         return os.path.join(self.project_root, self.stable_dir, stable)
 
+    def build(self, release, interactive=False):
+        released_tags = os.path.join(self.project_root, self.tags_dir, release)
+        tag = self.get_last_tag(released_tags)
+        remote = os.path.join(released_tags, str(tag))
+        package_name = '%s-%s-%s' % (self.project_key, release, tag)
+        local_path = os.path.join('/tmp', package_name)
+        if os.path.exists(local_path):
+            if not interactive or query_yes_no('remove %s?' % local_path,
+                                               default='yes'):
+                shutil.rmtree(local_path)
+            else:
+                cerr('Aborted')
+                sys.exit(0)
+        self.export(remote, local_path)
+        archive_name = '/tmp/%s.tgz' % package_name
+        self.tar(archive_name, '/tmp', package_name, quiet=True)
+        dest = os.path.join(self.repo_url, self.project_key)
+        self.upload(archive_name, dest, interactive=interactive)
+        shutil.rmtree(local_path)
+        os.unlink(archive_name)
+
+    def tar(self, archive, chdir, folder, quiet=False):
+        args = ('/usr/bin/env', 'tar', 'czf', archive, '-C', chdir, folder)
+        return self.execute(args, quiet)
+
+    def execute(self, args, quiet=False):
+        if not quiet:
+            sys.stderr.write(' '.join(args[1:]) + '\n')
+        p = Popen(args, stdout=PIPE, stderr=PIPE)
+        stdout, stderr = p.communicate()
+        return stdout, stderr, p.returncode
+
+    def upload(self, source, destination, quiet=False, interactive=False):
+        args = ('/usr/bin/env', 'curl', '-T', source, destination)
+        cerr("Upload command: %s" % ' '.join(args[1:]))
+        if interactive and not query_yes_no('upload file?', default='yes'):
+            cerr('Aborted')
+            return
+        return self.execute(args, quiet)
+
+    def checkout(self, remote, local):
+        args = ('co', remote, local)
+        stdout, stderr, return_code = self.svn(args)
+        if return_code != 0:
+            raise SVNError(stderr)
+
+    def export(self, remote, local):
+        args = ('export', remote, local)
+        stdout, stderr, return_code = self.svn(args)
+        if return_code != 0:
+            raise SVNError(stderr)
 
 

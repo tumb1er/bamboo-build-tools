@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+
+
+from optparse import OptionParser
+import re
+import sys
+from bamboo.helpers import cerr
+from bamboo.svn import SVNHelper
+
+
+parser = OptionParser(
+    usage='%prog [options] <package_name>',
+    epilog='if not task_key supplied, will take them from STDIN')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-t", "--root", dest="root", default="^",
+                  help="project root location")
+parser.add_option("-i", "--interactive", dest="interactive", default=False,
+                  action="store_true", help="confirm actions")
+options, args = parser.parse_args()
+if len(args) < 1:
+    parser.print_usage()
+    sys.exit(-1)
+m = re.match(r'^([_a-z]+)-([\d]+\.[\d]+\.[\d]+)$', args[0])
+if not m:
+    cerr('invalid package name (expected project-1.0.0): ' + args[0])
+    sys.exit(-2)
+project = m.group(1)
+release = m.group(2)
+svn = SVNHelper(project, root=options.root, configfile=options.configfile)
+svn.build(release, interactive=options.interactive)
