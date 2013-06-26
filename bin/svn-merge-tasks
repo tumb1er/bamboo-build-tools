@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+
+from optparse import OptionParser
+import re
+import sys
+from bamboo.helpers import cerr
+from bamboo.svn import SVNHelper
+
+
+parser = OptionParser(
+    usage='%prog [options] <integration-task-key> [<task_key> <task_key> ...]',
+    epilog='if not task_key supplied, will take them from STDIN')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-b", "--branch", dest="branch", default="trunk",
+                  help="source branch for stable")
+parser.add_option("-t", "--root", dest="root", default="^",
+                  help="project root location")
+parser.add_option("-i", "--interactive", dest="interactive", default=False,
+                  action="store_true", help="confirm actions")
+options, args = parser.parse_args()
+if len(args) < 1:
+    parser.print_usage()
+    sys.exit(-1)
+m = re.match(r'([A-Z]+)-[\d]+', args[0])
+if not m:
+    cerr('invalid JIRA task key: ' + args[0])
+    sys.exit(-2)
+project_key = m.group(1)
+svn = SVNHelper(project_key, root=options.root, configfile=options.configfile)
+svn.merge_tasks(args[0], args[1:], branch=options.branch,
+                interactive=options.interactive)

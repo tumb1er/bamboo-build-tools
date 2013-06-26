@@ -49,3 +49,14 @@ def query_yes_no(question, default="yes"):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' "
                              "(or 'y' or 'n').\n")
+
+
+class File(object):
+    # ... all the methods you already have ...
+
+    # context management
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        self.close()
