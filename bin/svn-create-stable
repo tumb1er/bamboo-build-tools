@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+
+from optparse import OptionParser
+import re
+import sys
+from bamboo.helpers import cerr
+from bamboo.svn import SVNHelper
+
+
+parser = OptionParser(usage='%prog [options] <jira_task_key> <stable_name>')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-b", "--branch", dest="branch", default="trunk",
+                  help="source branch for stable")
+parser.add_option("-t", "--root", dest="root", default="^",
+                  help="project root location")
+parser.add_option("-i", "--interactive", dest="interactive", default=False,
+                  action="store_true", help="confirm actions")
+options, args = parser.parse_args()
+if len(args) < 2:
+    parser.print_usage()
+    sys.exit(-1)
+m = re.match(r'([A-Z]+)-[\d]+', args[0])
+if not m:
+    cerr('invalid JIRA task key: ' + args[0])
+    sys.exit(-2)
+project_key = m.group(1)
+svn = SVNHelper(project_key, root=options.root, configfile=options.configfile)
+if not re.match(r'^[\d]+\.(x|[\d]+\.(x|[\d]+))$', args[1]):
+    cerr('invalid stable: ' + args[1])
+    sys.exit(-2)
+svn.create_stable(args[1], task=args[0], branch=options.branch,
+                  interactive=options.interactive)

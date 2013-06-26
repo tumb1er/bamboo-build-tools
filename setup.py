@@ -12,7 +12,7 @@ setup(
         'bin/coverage2clover',
         'bin/bbt-deploy',
         'bin/bbt-test',
-        'bin/bbt-svn',
+        'bin/svn-log-tasks',
     ],
     package_data={'bamboo': ['Makefile']},
     description='python build tools for Atlassian Bamboo',
