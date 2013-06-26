@@ -15,6 +15,8 @@ parser.add_option("-s", "--sources", dest="sources", default=None,
                   help="project sources directory")
 parser.add_option("-l", "--local-virtualenv", dest="local_venv", default=False,
                   action="store_true", help="create virtualenv in local dir")
+parser.add_option("-g", "--gmake", dest="gmake", default=False,
+                  action="store_true", help="run gmake instead of make")
 
 options, args = parser.parse_args()
 if len(args) < 1:
@@ -26,7 +28,7 @@ if len(args) < 1:
 if args[0] == 'help':
     parser.print_help()
     sys.exit()
-runner = MakeRunner(args[0], configfile=options.configfile,
+runner = MakeRunner(args[0], configfile=options.configfile, gmake=options.gmake,
                     sources=options.sources, local_venv=options.local_venv)
 
 if options.deploy == 'production':

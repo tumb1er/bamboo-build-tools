@@ -41,8 +41,9 @@ class MakeRunner(object):
             self.__dict__.update(config_locals)
 
     def __init__(self, project_name, configfile='bamboo.cfg', sources=None,
-                 local_venv=False):
+                 local_venv=False, gmake=False):
         self.requires = {}
+        self.make = 'gmake' if gmake else 'make'
         self.include = ()
         self.extra_targets = {}
 
@@ -113,7 +114,7 @@ class MakeRunner(object):
     def execute_make(self, make_args):
         cerr(' '.join(make_args))
         cerr('=' * 40)
-        os.execv('/usr/bin/make', make_args)
+        os.execv('/usr/bin/env', (self.make,) + make_args)
 
     def install_test(self):
         make_args = self.make_args('deploy-test')

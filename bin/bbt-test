@@ -16,6 +16,8 @@ parser.add_option("-t", "--type", dest="type", help="tests type",
                   choices=('django', 'twisted', 'unittests'))
 parser.add_option("-o", "--with-coverage", dest="coverage", default=False,
                   action="store_true", help="run tests with coverage")
+parser.add_option("-g", "--gmake", dest="gmake", default=False,
+                  action="store_true", help="run gmake instead of make")
 parser.add_option("-s", "--sources", dest="sources", default=None,
                   help="project sources directory")
 parser.add_option("-l", "--local-virtualenv", dest="local_venv", default=False,
@@ -28,7 +30,7 @@ if len(args) < 1:
 if args[0] == 'help':
     parser.print_help()
     sys.exit()
-runner = MakeRunner(args[0], configfile=options.configfile,
+runner = MakeRunner(args[0], configfile=options.configfile, gmake=options.gmake,
                     sources=options.sources, local_venv=options.local_venv)
 
 if options.type == 'django':
