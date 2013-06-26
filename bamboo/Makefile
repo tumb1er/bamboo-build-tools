@@ -200,4 +200,4 @@ report-dir:
 	mkdir -p $(REPORTS_DIR)
 
 clean-reports:
-	rm -r $(REPORTS_DIR)/*
+	rm -r $(REPORTS_DIR)
