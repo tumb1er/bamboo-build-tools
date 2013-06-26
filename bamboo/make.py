@@ -2,6 +2,7 @@
 
 # $Id: $
 import os.path
+from bamboo.helpers import cerr
 
 
 class MakeRunner(object):
@@ -110,8 +111,8 @@ class MakeRunner(object):
         self.execute_make(make_args)
 
     def execute_make(self, make_args):
-        print ' '.join(make_args)
-        print '=' * 40
+        cerr(' '.join(make_args))
+        cerr('=' * 40)
         os.execv('/usr/bin/make', make_args)
 
     def install_test(self):
