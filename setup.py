@@ -16,6 +16,7 @@ setup(
         'bin/svn-create-stable',
         'bin/svn-merge-tasks',
         'bin/svn-release',
+        'bin/svn-build',
     ],
     package_data={'bamboo': ['Makefile']},
     description='python build tools for Atlassian Bamboo',
