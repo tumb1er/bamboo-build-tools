@@ -273,6 +273,8 @@ class SVNHelper(object):
         archive_name = '/tmp/%s.tgz' % package_name
         self.tar(archive_name, '/tmp', package_name, quiet=True)
         dest = os.path.join(self.repo_url, self.project_key)
+        if not dest.endswith('/'):
+            dest += '/'
         self.upload(archive_name, dest, interactive=interactive)
         shutil.rmtree(local_path)
         os.unlink(archive_name)
