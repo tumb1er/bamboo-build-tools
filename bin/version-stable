@@ -8,11 +8,13 @@ from bamboo.tasks import Tasks
 
 
 parser = OptionParser(usage='%prog [options] <version>')
+parser.add_option("-a", "--all", dest="all", default=False,
+                  action="store_true", help="get all stables by version")
 
 options, args = parser.parse_args()
 if len(args) < 1:
     parser.print_usage()
     sys.exit(-1)
 
-for stable in get_stable(args[0], all=True):
+for stable in get_stable(args[0], all=options.all):
     cout(stable)

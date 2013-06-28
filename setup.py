@@ -19,7 +19,7 @@ setup(
         'bin/svn-build',
         'bin/task-search',
         'bin/task-versions',
-        'bin/version-stables'
+        'bin/version-stable'
     ],
     package_data={'bamboo': ['Makefile']},
     description='python build tools for Atlassian Bamboo',
