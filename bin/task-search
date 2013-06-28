@@ -1,5 +1,8 @@
+#!/usr/bin/env python
+
 from optparse import OptionParser
 import sys
+
 from bamboo.helpers import cout
 from bamboo.tasks import Tasks
 
