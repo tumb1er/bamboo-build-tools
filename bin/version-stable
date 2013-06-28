@@ -4,7 +4,6 @@ from optparse import OptionParser
 import sys
 
 from bamboo.helpers import cout, get_stable
-from bamboo.tasks import Tasks
 
 
 parser = OptionParser(usage='%prog [options] <version>')
