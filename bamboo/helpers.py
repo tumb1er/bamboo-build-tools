@@ -56,5 +56,5 @@ def parse_config(obj, configfile):
     filename = os.path.abspath(configfile)
     if os.path.exists(filename) and os.path.isfile(filename):
         config_locals = {}
-        execfile(filename, locals=config_locals)
+        execfile(filename, globals(), config_locals)
         obj.__dict__.update(config_locals)
