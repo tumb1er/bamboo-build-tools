@@ -43,6 +43,6 @@ class Tasks(object):
             query += ' AND type = "%s"' % issue_type
         if assignee:
             query += ' AND assignee="%s"' % assignee
-        if assignee:
+        if release:
             query += ' AND fixVersion="%s"' % release
         return self.jira.search_issues(query)
