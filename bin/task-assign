@@ -11,9 +11,8 @@ parser = OptionParser(usage='%prog [options] <task_key> [<assignee>]')
 parser.add_option("-c", "--config-file", dest="configfile",
                   default='bamboo.cfg', help="read config from FILE",
                   metavar="FILE")
-parser.add_option("-m", "--me", dest="me",
-                  default=False, help="assign to me",
-                  metavar="FILE")
+parser.add_option("-m", "--me", dest="me", action="store_true",
+                  default=False, help="assign to me")
 
 options, args = parser.parse_args()
 if len(args) < 1:
