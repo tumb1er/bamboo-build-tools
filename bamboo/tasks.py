@@ -42,7 +42,10 @@ class Tasks(object):
         if isinstance(issue_type, str):
             query += ' AND type = "%s"' % issue_type
         if assignee:
-            query += ' AND assignee="%s"' % assignee
+            if assignee == 'currentUser()':
+                query += ' AND assignee=currentUser()'
+            else:
+                query += ' AND assignee="%s"' % assignee
         if release:
             query += ' AND fixVersion="%s"' % release
         return self.jira.search_issues(query)
