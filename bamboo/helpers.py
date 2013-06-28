@@ -1,6 +1,7 @@
 # coding: utf-8
 
 # $Id: $
+import re
 import sys
 import os.path
 
@@ -58,3 +59,14 @@ def parse_config(obj, configfile):
         config_locals = {}
         execfile(filename, globals(), config_locals)
         obj.__dict__.update(config_locals)
+
+
+def get_stable(release, all=False):
+    stable = release
+    stable = re.sub(r'([\d]+)\.([\d]+)\.0', '\\1.x', stable)
+    stable = re.sub(r'([\d]+)\.([\d]+)\.([\d]+)', '\\1.\\2.x', stable)
+    if all:
+        result = {stable}
+        result.add(re.sub(r'([\d]+)\.([\d]+)\.x', '\\1.x', stable))
+        return list(result)
+    return stable

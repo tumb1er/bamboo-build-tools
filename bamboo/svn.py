@@ -8,7 +8,7 @@ import re
 import shutil
 from subprocess import Popen, PIPE
 import sys
-from bamboo.helpers import cout, cerr, query_yes_no, parse_config
+from bamboo.helpers import cout, cerr, query_yes_no, parse_config, get_stable
 
 
 class SVNError(Exception):
@@ -231,7 +231,7 @@ class SVNHelper(object):
         last_tag = self.get_last_tag(released_tags)
         new_tag = '%02d' % (last_tag + 1)
         tag = os.path.join(released_tags, new_tag)
-        stable = self.compute_stable(release)
+        stable = self.compute_stable_path(release)
         msg = '%s create tag %s-%s' % (task_key, release, new_tag)
         self.svn_copy(stable, tag, task_key, message=msg,
                       interactive=interactive)
@@ -244,9 +244,8 @@ class SVNHelper(object):
         if return_code != 0:
             raise SVNError(stderr)
 
-    def compute_stable(self, release):
-        stable = release.replace('0', 'x')
-        stable = re.sub(r'x\.(x|[\d]+)$', 'x', stable)
+    def compute_stable_path(self, release):
+        stable = get_stable(release)
         return os.path.join(self.project_root, self.stable_dir, stable)
 
     def build(self, release, interactive=False):

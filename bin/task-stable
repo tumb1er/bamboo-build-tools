@@ -1,0 +1,25 @@
+from optparse import OptionParser
+import sys
+
+from bamboo.helpers import cout, get_stable
+from bamboo.tasks import Tasks
+
+
+parser = OptionParser(usage='%prog [options] <task_key>')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+
+options, args = parser.parse_args()
+if len(args) < 1:
+    parser.print_usage()
+    sys.exit(-1)
+
+jira = Tasks(configfile=options.configfile)
+versions = jira.get_versions(args[0])
+stables = set()
+for version in versions:
+    stables.update(get_stable(version, all=True))
+
+for stable in stables:
+    cout(stable)

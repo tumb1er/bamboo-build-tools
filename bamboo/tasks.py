@@ -16,18 +16,17 @@ class Tasks(object):
         self.jira = JIRA({'server': self.server_name},
                          basic_auth=(self.jira_user, self.jira_password))
 
-    def fetch(self, task_key):
+    def get_versions(self, task_key):
         self.issue = self.jira.issue(task_key)
-
-    def get_versions(self):
         result = []
         for v in self.issue.fields.fixVersions:
-            if v.archived or v.released:
-                continue
+            # if v.archived or v.released:
+            #     continue
             version = v.name
             if not re.match(r'^[\d]+\.[\d]+\.[\d]+$', version):
                 continue
             result.append(version)
+        return result
 
     def search_tasks(self, project_key, status=None, issue_type=None):
         query = "project = %s" % project_key
