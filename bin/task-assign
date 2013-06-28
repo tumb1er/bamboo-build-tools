@@ -23,12 +23,14 @@ if len(args) > 1:
     assignee = args[1]
 else:
     if options.me:
-        assignee = 'currentUser()'
+        assignee = True
     else:
         assignee = None
 
 jira = Tasks(configfile=options.configfile)
 if assignee:
+    if assignee is True:
+        assignee = jira.jira_user
     jira.assign(args[0], assignee)
 else:
     cout(jira.get_assignee(args[0]))
