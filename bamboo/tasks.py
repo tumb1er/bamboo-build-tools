@@ -55,3 +55,10 @@ class Tasks(object):
 
     def transition(self, task_key, transition_id):
         self.jira.transition_issue(task_key, transition_id)
+
+    def assign(self, task_key, assignee):
+        self.jira.assign_issue(task_key, assignee)
+
+    def get_assignee(self, task_key):
+        issue = self.jira.issue(task_key)
+        return issue.fields.assignee.name
