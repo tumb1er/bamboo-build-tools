@@ -1,0 +1,26 @@
+from optparse import OptionParser
+import sys
+from bamboo.helpers import cout
+from bamboo.tasks import Tasks
+
+
+parser = OptionParser(usage='%prog [options] <project_key>')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-t", "--type", dest="type",
+                  default=("Development Ticket", "Development Subtask",
+                           "Bug Ticket", "Bug Subtask"),
+                  help='allowed task types')
+parser.add_option("-s", "--status", dest="status", default="Integrating",
+                  help="allowed task statuses")
+
+options, args = parser.parse_args()
+if len(args) < 1:
+    parser.print_usage()
+    sys.exit(-1)
+
+jira = Tasks(configfile=options.configfile)
+for v in jira.search_tasks(args[0], issue_type=options.type,
+                           status=options.status):
+    cout(v.key)

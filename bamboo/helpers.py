@@ -2,6 +2,7 @@
 
 # $Id: $
 import sys
+import os.path
 
 
 def cout(*lines):
@@ -51,12 +52,9 @@ def query_yes_no(question, default="yes"):
                              "(or 'y' or 'n').\n")
 
 
-class File(object):
-    # ... all the methods you already have ...
-
-    # context management
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc_info):
-        self.close()
+def parse_config(obj, configfile):
+    filename = os.path.abspath(configfile)
+    if os.path.exists(filename) and os.path.isfile(filename):
+        config_locals = {}
+        execfile(filename, locals=config_locals)
+        obj.__dict__.update(config_locals)

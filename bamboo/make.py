@@ -2,7 +2,7 @@
 
 # $Id: $
 import os.path
-from bamboo.helpers import cerr
+from bamboo.helpers import cerr, parse_config
 
 
 class MakeRunner(object):
@@ -30,15 +30,8 @@ class MakeRunner(object):
         'nose',
         'coverage',
         'unittest-xml-reporting',
-        'django_nose'
+        'django-nose'
     )
-
-    def parse_config(self, configfile):
-        filename = os.path.abspath(configfile)
-        if os.path.exists(filename) and os.path.isfile(filename):
-            config_locals = {}
-            execfile(filename, locals=config_locals)
-            self.__dict__.update(config_locals)
 
     def __init__(self, project_name, configfile='bamboo.cfg', sources=None,
                  local_venv=False, gmake=False):
@@ -47,7 +40,7 @@ class MakeRunner(object):
         self.include = ()
         self.extra_targets = {}
 
-        self.parse_config(configfile)
+        parse_config(self, configfile)
 
         self.project_name = project_name
         self.makefile = os.path.join(os.path.dirname(os.path.abspath(__file__)),

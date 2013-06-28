@@ -8,7 +8,7 @@ import re
 import shutil
 from subprocess import Popen, PIPE
 import sys
-from bamboo.helpers import cout, cerr, query_yes_no
+from bamboo.helpers import cout, cerr, query_yes_no, parse_config
 
 
 class SVNError(Exception):
@@ -26,14 +26,7 @@ class SVNHelper(object):
         self.project_key = project_key
         self.project_root = root
         self.repo_url = 'http://y.rutube.ru/vrepo/'
-        self.parse_config(configfile)
-
-    def parse_config(self, configfile):
-        filename = os.path.abspath(configfile)
-        if os.path.exists(filename) and os.path.isfile(filename):
-            config_locals = {}
-            execfile(filename, locals=config_locals)
-            self.__dict__.update(config_locals)
+        parse_config(self, configfile)
 
     def log_tasks(self, revision, branch='^/trunk'):
         args = ('log',)

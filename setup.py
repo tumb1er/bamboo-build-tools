@@ -17,8 +17,12 @@ setup(
         'bin/svn-merge-tasks',
         'bin/svn-release',
         'bin/svn-build',
+        'bin/task-search',
     ],
     package_data={'bamboo': ['Makefile']},
     description='python build tools for Atlassian Bamboo',
-    install_requires=['lxml'],
+    install_requires=[
+        'lxml',
+        'jira-python'
+    ],
 )
