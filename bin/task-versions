@@ -18,10 +18,5 @@ if len(args) < 1:
     sys.exit(-1)
 
 jira = Tasks(configfile=options.configfile)
-versions = jira.get_versions(args[0])
-stables = set()
-for version in versions:
-    stables.update(get_stable(version, all=True))
-
-for stable in stables:
-    cout(stable)
+for version in jira.get_versions(args[0]):
+    cout(version)
