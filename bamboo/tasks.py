@@ -28,7 +28,8 @@ class Tasks(object):
             result.append(version)
         return result
 
-    def search_tasks(self, project_key, status=None, issue_type=None):
+    def search_tasks(self, project_key, status=None, issue_type=None,
+                     assignee=None, release=None):
         query = "project = %s" % project_key
         if isinstance(status, (tuple, list)):
             statuses = ', '.join('"%s"' % s for s in status)
@@ -40,4 +41,8 @@ class Tasks(object):
             query += ' AND type IN (%s)' % types
         if isinstance(issue_type, str):
             query += ' AND type = "%s"' % issue_type
+        if assignee:
+            query += ' AND assignee="%s"' % assignee
+        if assignee:
+            query += ' AND fixVersion="%s"' % release
         return self.jira.search_issues(query)

@@ -17,6 +17,12 @@ parser.add_option("-t", "--type", dest="type",
                   help='allowed task types')
 parser.add_option("-s", "--status", dest="status", default="Integrating",
                   help="allowed task statuses")
+parser.add_option("-u", "--user", dest="user", default=None,
+                  help="assignee")
+parser.add_option("-r", "--release", dest="release", default=None,
+                  help="release")
+
+
 
 options, args = parser.parse_args()
 if len(args) < 1:
@@ -25,5 +31,6 @@ if len(args) < 1:
 
 jira = Tasks(configfile=options.configfile)
 for v in jira.search_tasks(args[0], issue_type=options.type,
-                           status=options.status):
+                           status=options.status, assignee=options.user,
+                           release=options.release):
     cout(v.key)
