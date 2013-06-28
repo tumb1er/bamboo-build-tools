@@ -28,6 +28,9 @@ class Tasks(object):
             result.append(version)
         return result
 
+    def get_transitions(self, task_key):
+        return self.jira.transitions(task_key)
+
     def search_tasks(self, project_key, status=None, issue_type=None,
                      assignee=None, release=None):
         query = "project = %s" % project_key
@@ -49,3 +52,6 @@ class Tasks(object):
         if release:
             query += ' AND fixVersion="%s"' % release
         return self.jira.search_issues(query)
+
+    def transition(self, task_key, transition_id):
+        self.jira.transition_issue(task_key, transition_id)
