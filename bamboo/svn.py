@@ -254,7 +254,7 @@ class SVNHelper(object):
 
     def build(self, release, interactive=False):
         released_tags = os.path.join(self.project_root, self.tags_dir, release)
-        tag = self.get_last_tag(released_tags)
+        tag = '%02d' % self.get_last_tag(released_tags)
         remote = os.path.join(released_tags, str(tag))
         package_name = '%s-%s-%s' % (self.project_key, release, tag)
         local_path = os.path.join('/tmp', package_name)
