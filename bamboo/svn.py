@@ -76,14 +76,17 @@ class SVNHelper(object):
             source = os.path.join(self.project_root, 'trunk')
             cerr("Major stable %s assumed created from %s" % (stable, source))
         elif parts[2] == 'x':
-            source = os.path.join(self.project_root, self.stable_dir,
-                                  '%s.x' % parts[0])
+            released = '%s.%s.0' % (parts[0], parts[1])
+            build = self.get_last_tag(os.path.join(self.project_root,
+                                                   self.tags_dir, released))
+            if not build:
+                raise SVNError(
+                    "Minor release tag for %s doesn't exist" % released)
+            source = os.path.join(self.project_root, self.tags_dir,
+                                  released, '%02d' % build)
             cerr("Minor stable %s assumed created from %s" % (stable, source))
         else:
-            source = os.path.join(self.project_root, self.stable_dir,
-                                  '%s.%s.x' % (parts[0], parts[1]))
-            cerr("Sub-minor stable %s assumed created from %s" % (
-                stable, source))
+            raise ValueError("Don't know how to make stable %s" % stable)
         return source
 
     def check_dir_exists(self, path):
@@ -107,7 +110,7 @@ class SVNHelper(object):
     def create_stable(self, stable, task, branch=None, interactive=False):
         stable_path = os.path.join(self.project_root, self.stable_dir)
         if not self.check_dir_exists(stable_path):
-            self.makedir(stable_path, interactive=interactive)
+            self.makedir(stable_path, task, interactive=interactive)
         stable_path = os.path.join(stable_path, stable)
         if self.check_dir_exists(stable_path):
             cerr("Stable already exists")
@@ -159,7 +162,7 @@ class SVNHelper(object):
 
     def confirm_execution(self, args):
         cerr('SVN command:')
-        cerr('svn ' + ' '.join(args))
+        cerr('svn ' + ' '.join('"%s"' % a if ' ' in a else a for a in args))
         if not query_yes_no('commit?', default='yes'):
             cerr('Aborted')
             sys.exit(0)
@@ -227,7 +230,7 @@ class SVNHelper(object):
         released_tags = os.path.join(self.project_root, self.tags_dir, release)
         if not self.check_dir_exists(released_tags):
             cerr("Creating tags dir")
-            self.makedir(released_tags, interactive=interactive)
+            self.makedir(released_tags, task_key, interactive=interactive)
         last_tag = self.get_last_tag(released_tags)
         new_tag = '%02d' % (last_tag + 1)
         tag = os.path.join(released_tags, new_tag)
@@ -236,8 +239,9 @@ class SVNHelper(object):
         self.svn_copy(stable, tag, task_key, message=msg,
                       interactive=interactive)
 
-    def makedir(self, path, interactive=False):
-        args = ('mkdir', '--parents', path, '')
+    def makedir(self, path, task_key, interactive=False):
+        args = ('mkdir', '--parents', path, '-m',
+                '%s make directory %s' % (task_key, path))
         if interactive:
             self.confirm_execution(args)
         stdout, stderr, return_code = self.svn(args)
@@ -277,7 +281,8 @@ class SVNHelper(object):
 
     def execute(self, args, quiet=False):
         if not quiet:
-            sys.stderr.write(' '.join(args[1:]) + '\n')
+            sys.stderr.write(' '.join(
+                '"%s"' % a if ' ' in a else a for a in args[1:]) + '\n')
         p = Popen(args, stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate()
         return stdout, stderr, p.returncode

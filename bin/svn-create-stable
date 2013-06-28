@@ -12,7 +12,7 @@ parser = OptionParser(usage='%prog [options] <jira_task_key> <stable_name>')
 parser.add_option("-c", "--config-file", dest="configfile",
                   default='bamboo.cfg', help="read config from FILE",
                   metavar="FILE")
-parser.add_option("-b", "--branch", dest="branch", default="trunk",
+parser.add_option("-b", "--branch", dest="branch", default=None,
                   help="source branch for stable")
 parser.add_option("-t", "--root", dest="root", default="^",
                   help="project root location")
