@@ -19,6 +19,7 @@ setup(
         'bin/svn-build',
         'bin/task-search',
         'bin/task-versions',
+        'bin/task-assign',
         'bin/task-transition',
         'bin/version-stable'
     ],
