@@ -20,8 +20,8 @@ class Tasks(object):
         self.issue = self.jira.issue(task_key)
         result = []
         for v in self.issue.fields.fixVersions:
-            # if v.archived or v.released:
-            #     continue
+            if v.archived or v.released:
+                continue
             version = v.name
             if not re.match(r'^[\d]+\.[\d]+\.[\d]+$', version):
                 continue
