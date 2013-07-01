@@ -56,12 +56,18 @@ REQUIRES_TEST:=requires.test.txt
 SETTINGS_LOCAL=settings_local_$(PROJECT_NAME).py
 
 # Путь до manage.py для Django-проектов
-MANAGE_SCRIPT=./manage.py
+MANAGE_SCRIPT:=./manage.py
+
+# Тестируемый модуль Twisted
+TWISTED_TEST_MODULE:=tests
+
+TRIAL_CMD=$(VENV_DIR)/bin/trial --reporter=subunit $(TWISTED_TEST_MODULE) | subunit-1to2 | subunit2junitxml --no-passthrough --output-to=TEST-results.xml
+
 
 # Аргументы запуска coverage
 COVERAGE_ARGS:= --branch --source=$(WORKING_DIR) --omit=$(VENV_DIR)/*
 
-REPORT_ARGS= --omit=*migrations*
+REPORT_ARGS:= --omit=*migrations*
 
 # Аргументы запуска nosetests
 NOSE_ARGS:= --verbosity=0 --with-xunit
@@ -84,8 +90,10 @@ endif
 # Запускать ли тесты вместе со сбором coverage
 ifdef WITH_COVERAGE
     DJANGO_TEST_TARGET:=coverage-django-tests
+    TWISTED_TEST_TARGET:=coverage-twisted-tests
 else
     DJANGO_TEST_TARGET:=run-django-tests
+    TWISTED_TEST_TARGET:=run-twisted-tests
 endif
 
 ifdef $(TEST_PROCESSES)
@@ -139,6 +147,14 @@ deploy-test: $(COPY_CWD_TARGET) deploy-basic requires-test symlinks $(POST_DEPLO
 
 test-django: $(DJANGO_TEST_TARGET)
 	$(info DJANGO TESTS COMPLETED)
+
+# Запуск тестов для Twisted-проекта
+# =================================
+#
+# запускает тесты через trial
+
+test-twisted: $(TWISTED_TEST_TARGET)
+	$(info TWISTED TESTS COMPLETED)
 
 # Служебные цели
 # ===============================
@@ -194,9 +210,22 @@ coverage-django-tests: clean-reports report-dir
 	coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
 	coverage2clover -i $(COVERAGE_XML) -o $(CLOVER_XML)
 
+coverage-twisted-tests: clean-reports report-dir
+	echo "Running Twisted tests with coverage"
+	$(ACTIVATE); $(COVERAGE_CMD) $(TRIAL_CMD) $(QUITE_CMD)
+	coverage combine
+	coverage xml -o $(COVERAGE_XML)
+	coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
+	coverage2clover -i $(COVERAGE_XML) -o $(CLOVER_XML)
+
 run-django-tests:
 	echo "Running Django tests"
 	$(ACTIVATE); python $(MANAGE_CMD) $(DJANGO_APPS) $(QUITE_CMD)
+
+run-twisted-tests:
+	echo "Running Twisted tests"
+	$(ACTIVATE); $(TRIAL_CMD) $(QUITE_CMD)
+
 
 report-dir:
 	mkdir -p $(REPORTS_DIR)

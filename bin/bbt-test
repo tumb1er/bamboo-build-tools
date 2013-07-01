@@ -35,4 +35,6 @@ runner = MakeRunner(args[0], configfile=options.configfile, gmake=options.gmake,
 
 if options.type == 'django':
     runner.run_django_tests(coverage=options.coverage)
+if options.type == 'twisted':
+    runner.run_twisted_tests(coverage=options.coverage)
 

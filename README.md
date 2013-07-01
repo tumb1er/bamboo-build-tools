@@ -163,7 +163,7 @@ Runs tests and collects interesting statistics for Bamboo.
 "djando" is unittest type:
 
 * **django** run Django unittests
-* **twisted** run Twisted unittests (TBD)
+* **twisted** run Twisted unittests
 * **unittest** run python unittests (TBD)
 
 #### Other options:

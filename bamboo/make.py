@@ -31,6 +31,8 @@ class MakeRunner(object):
         'coverage',
         'unittest-xml-reporting',
         'django-nose',
+        'python-subunit',
+        'junitxml',
     )
 
     def __init__(self, project_name, configfile='bamboo.cfg', sources=None,
@@ -127,6 +129,12 @@ class MakeRunner(object):
 
     def run_django_tests(self, coverage=False):
         make_args = self.make_args('test-django')
+        if coverage:
+            make_args += ('-e', 'WITH_COVERAGE=true')
+        self.execute_make(make_args)
+
+    def run_twisted_tests(self, coverage=False):
+        make_args = self.make_args('test-twisted')
         if coverage:
             make_args += ('-e', 'WITH_COVERAGE=true')
         self.execute_make(make_args)
