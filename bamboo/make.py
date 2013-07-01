@@ -31,7 +31,6 @@ class MakeRunner(object):
         'coverage',
         'unittest-xml-reporting',
         'django-nose',
-        'nosexunit',
     )
 
     def __init__(self, project_name, configfile='bamboo.cfg', sources=None,
