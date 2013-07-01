@@ -11,13 +11,10 @@ All bamboo SVN tools require SVN commit messages to start with JIRA task key,
 > PROJ-123 some feature implemented.
 
 Project directory stucture in SVN is following:
-> /trunk # trunk location
-
-> /branches/stable # stable branches location, named like 1.x or 1.2.x
-
-> /tags/release # tags location for JIRA version 1.2.3, and
-
-> /tags/release/1.2.3/ # build location for version 1.2.3, 2 digits with leading zero (/tags/release/1.2.3/04)
+    /trunk               # trunk location
+    /branches/stable     # stable branches location, named like 1.x or 1.2.x
+    /tags/release        # tags location for JIRA version 1.2.3, and
+    /tags/release/1.2.3/ # builds dir for version 1.2.3
 
 
 Project root may be not only the repo root, but any other path, if there are several project in one SVN repo.
@@ -70,7 +67,7 @@ First line is a list of found JIRA tasks, last lines are lists of revisions sort
 Tool to collect and merge to stable all commits by JIRA task key.
 
 #### Example:
-> svn-merge-tasks -t http://svn.rutube.ru/match -i PROJ-9 PROJ-6 PROJ-5
+> svn-merge-tasks -t http://svn.rutube.ru/project -i PROJ-9 PROJ-6 PROJ-5
 
 PROJ-9 is "Integration task" used in commit message, other args are tasks to merge.
 
@@ -161,6 +158,7 @@ Runs tests and collects interesting statistics for Bamboo.
 
 #### Example:
 > bbt-test -t django project
+
 "project" is project name used in paths.
 "djando" is unittest type:
 
@@ -181,6 +179,7 @@ Transforms coverage.py xml report to Atlassian Clover test report format underst
 
 #### Example:
 > coverage2clover -i input.xml -o output.xml
+
 > cat input.xml | coverage2clover > output.xml
 
 
@@ -219,6 +218,7 @@ Assigns a task to "currentUser()" with **-m** flag or to other.
 
 #### Example:
 > task-assign -m PROJ-5
+
 > task-assign PROJ-6 username
 
 #### Other options:
@@ -230,6 +230,7 @@ Transit task over workflow
 
 #### Example:
 > task-transition PROJ-6 developed
+
 "developed" is allowed task status name.
 
 #### Other options:
@@ -250,7 +251,6 @@ Python-style config file for Bamboo Build Tools.
     }
     
     # additional include files
-    
     include = ('include1.mk', 'include2.mk')
     
     # additional make targets called after deploy
