@@ -62,3 +62,13 @@ class Tasks(object):
     def get_assignee(self, task_key):
         issue = self.jira.issue(task_key)
         return issue.fields.assignee.name
+
+    def task_info(self, task_key):
+        issue = self.jira.issue(task_key)
+        result = (
+            ('key', issue.key),
+            ('title', issue.fields.summary),
+            ('assignee', issue.fields.assignee.name),
+            ('status', issue.fields.status.name),
+        )
+        return result

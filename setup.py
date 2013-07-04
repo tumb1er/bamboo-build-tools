@@ -20,6 +20,7 @@ setup(
         'bin/task-search',
         'bin/task-versions',
         'bin/task-assign',
+        'bin/task-info',
         'bin/task-transition',
         'bin/version-stable'
     ],
