@@ -63,7 +63,9 @@ DJANGO_APPS=
 # Тестируемый модули Twisted
 TRIAL_TESTS:=tests
 
-TRIAL_CMD=$(VENV_DIR)/bin/trial --reporter=subunit $(TRIAL_TESTS) | subunit-1to2 | subunit2junitxml --no-passthrough --output-to=TEST-results.xml
+TRIAL_SCRIPT:=$(VENV_DIR)/bin/trial
+
+TRIAL_CMD=$(TRIAL_SCRIPT) --reporter=subunit $(TRIAL_TESTS) | subunit-1to2 | subunit2junitxml --no-passthrough --output-to=TEST-results.xml
 
 # Аргументы запуска coverage
 COVERAGE_ARGS:= --branch --source=$(WORKING_DIR) --omit=$(VENV_DIR)/*
