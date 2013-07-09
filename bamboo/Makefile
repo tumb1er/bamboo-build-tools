@@ -42,7 +42,7 @@ PIP_INSTALL:=pip install -f $(DIST_URL)
 PIP_REQUIRES=$(PIP_INSTALL) -r $(SOURCES_DIR)/$(R);
 
 # Команда запуска coverage
-COVERAGE_CMD=python -m coverage run $(COVERAGE_ARGS)
+COVERAGE_CMD:=python -m coverage run $(APPEND_COVERAGE) $(COVERAGE_ARGS)
 
 # Команда запуска тестов Django
 MANAGE_CMD=$(MANAGE_SCRIPT) test $(NOSE_ARGS)

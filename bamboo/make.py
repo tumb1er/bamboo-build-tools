@@ -127,15 +127,19 @@ class MakeRunner(object):
         ) + self.test_tools
         os.execv('/usr/bin/env', args)
 
-    def run_django_tests(self, coverage=False):
+    def run_django_tests(self, coverage=False, append=False):
         make_args = self.make_args('test-django')
         if coverage:
             make_args += ('-e', 'WITH_COVERAGE=true')
+        if append:
+            make_args += ('-e', 'APPEND_COVERAGE=-a')
         self.execute_make(make_args)
 
-    def run_twisted_tests(self, coverage=False):
+    def run_twisted_tests(self, coverage=False, append=False):
         make_args = self.make_args('test-twisted')
         if coverage:
             make_args += ('-e', 'WITH_COVERAGE=true')
+        if append:
+            make_args += ('-e', 'APPEND_COVERAGE=-a')
         self.execute_make(make_args)
 
