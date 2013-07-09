@@ -20,8 +20,8 @@ parser.add_option("-g", "--gmake", dest="gmake", default=False,
                   action="store_true", help="run gmake instead of make")
 parser.add_option("-s", "--sources", dest="sources", default=None,
                   help="project sources directory")
-parser.add_option("-a", "--append", dest="append", default=None,
-                  help="append coverage information")
+parser.add_option("-a", "--append", dest="append", default=False,
+                  action="store_true", help="append coverage information")
 parser.add_option("-l", "--local-virtualenv", dest="local_venv", default=False,
                   action="store_true", help="create virtualenv in local dir")
 
