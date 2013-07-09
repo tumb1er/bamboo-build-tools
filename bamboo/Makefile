@@ -206,7 +206,7 @@ rcscripts:
 
 coverage-django-tests: clean-reports report-dir
 	echo "Running Django tests with coverage"
-	$(ACTIVATE); $(COVERAGE_CMD) $(MANAGE_CMD) $(QUITE_CMD)
+	$(ACTIVATE); $(COVERAGE_CMD) $(MANAGE_CMD) $(DJANGO_APPS) $(QUITE_CMD)
 	coverage combine
 	coverage xml -o $(COVERAGE_XML)
 	coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
