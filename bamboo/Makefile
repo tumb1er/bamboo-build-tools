@@ -60,12 +60,10 @@ MANAGE_SCRIPT:=./manage.py
 
 DJANGO_APPS=
 
-# Тестируемый модуль Twisted
-TWISTED_TEST_MODULE:=tests
+# Тестируемый модули Twisted
+TRIAL_TESTS:=tests
 
-TRIAL_CMD=$(VENV_DIR)/bin/trial --reporter=subunit $(TWISTED_TEST_MODULE) | subunit-1to2 | subunit2junitxml --no-passthrough --output-to=TEST-results.xml
-
-TRIAL_TESTS=
+TRIAL_CMD=$(VENV_DIR)/bin/trial --reporter=subunit $(TRIAL_TESTS) | subunit-1to2 | subunit2junitxml --no-passthrough --output-to=TEST-results.xml
 
 # Аргументы запуска coverage
 COVERAGE_ARGS:= --branch --source=$(WORKING_DIR) --omit=$(VENV_DIR)/*
@@ -215,7 +213,7 @@ coverage-django-tests: clean-reports report-dir
 
 coverage-twisted-tests: clean-reports report-dir
 	echo "Running Twisted tests with coverage"
-	$(ACTIVATE); $(COVERAGE_CMD) $(TRIAL_CMD) $(TRIAL_TESTS) $(QUITE_CMD)
+	$(ACTIVATE); $(COVERAGE_CMD) $(TRIAL_CMD) $(QUITE_CMD)
 	coverage combine
 	coverage xml -o $(COVERAGE_XML)
 	coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
@@ -227,7 +225,7 @@ run-django-tests:
 
 run-twisted-tests:
 	echo "Running Twisted tests"
-	$(ACTIVATE); $(TRIAL_CMD) $(TRIAL_TESTS) $(QUITE_CMD)
+	$(ACTIVATE); $(TRIAL_CMD) $(QUITE_CMD)
 
 
 report-dir:
