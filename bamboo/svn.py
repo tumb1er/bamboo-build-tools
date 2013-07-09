@@ -170,6 +170,11 @@ class SVNHelper(object):
     def svn_commit(self, interactive):
         args = ('ci', '-F', self.commit_message_filename)
         if interactive:
+            cerr("Commit message:")
+            cerr("-" * 40)
+            for line in open(self.commit_message_filename, 'r').readlines():
+                cerr(line)
+            cerr("-" * 40)
             self.confirm_execution(args)
         cerr("Committing merge to SVN")
         stdout, stderr, return_code = self.svn(args)
@@ -201,7 +206,7 @@ class SVNHelper(object):
                     continue
                 commit_msg_file.write('r%s %s %s\n' % (r, jira_task, msg))
                 args = ('merge', '--non-interactive', '-c', 'r%s' % r, source)
-                self.svn(args, quiet=True)
+                self.svn(args)
             commit_msg_file.flush()
             commit_msg_file.seek(0)
             merged = []
