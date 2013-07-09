@@ -22,7 +22,7 @@ options, args = parser.parse_args()
 if len(args) < 1:
     parser.print_usage()
     sys.exit(-1)
-m = re.match(r'^([_a-z]+)-([\d]+\.[\d]+\.[\d]+)$', args[0])
+m = re.match(r'^([_a-z\d]+)-([\d]+\.[\d]+\.[\d]+)$', args[0])
 if not m:
     cerr('invalid package name (expected project-1.0.0): ' + args[0])
     sys.exit(-2)
