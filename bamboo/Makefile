@@ -58,6 +58,8 @@ SETTINGS_LOCAL=settings_local_$(PROJECT_NAME).py
 # Путь до manage.py для Django-проектов
 MANAGE_SCRIPT:=./manage.py
 
+DJANGO_APPS=
+
 # Тестируемый модуль Twisted
 TWISTED_TEST_MODULE:=tests
 
