@@ -271,8 +271,10 @@ class SVNHelper(object):
                 sys.exit(0)
         self.export(remote, local_path)
         if build_cmd:
+            os.environ['PACKAGE'] = package_name
             os.chdir(local_path)
             cerr("Build cmd: %s" % build_cmd)
+            cerr("Package name: %s" % package_name)
             if interactive and not query_yes_no('execute?', default='yes'):
                 cerr('Aborted')
                 return
