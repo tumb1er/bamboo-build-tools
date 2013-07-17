@@ -304,7 +304,7 @@ class SVNHelper(object):
         if not quiet:
             sys.stderr.write(' '.join(
                 '"%s"' % a if ' ' in a else a for a in args[1:]) + '\n')
-        p = Popen(args, stdout=PIPE, stderr=PIPE)
+        p = Popen(args, stdout=PIPE, stderr=PIPE, env=os.environ)
         stdout, stderr = p.communicate()
         return stdout, stderr, p.returncode
 
