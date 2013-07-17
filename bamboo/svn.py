@@ -4,7 +4,6 @@
 
 import os
 import re
-import shlex
 import shutil
 from subprocess import Popen, PIPE
 import sys
