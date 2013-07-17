@@ -2,9 +2,9 @@
 
 # $Id: $
 
-
-import os.path
+import os
 import re
+import shlex
 import shutil
 from subprocess import Popen, PIPE
 import sys
@@ -257,7 +257,7 @@ class SVNHelper(object):
         stable = get_stable(release)
         return os.path.join(self.project_root, self.stable_dir, stable)
 
-    def build(self, release, interactive=False):
+    def build(self, release, interactive=False, build_cmd=None):
         released_tags = os.path.join(self.project_root, self.tags_dir, release)
         tag = '%02d' % self.get_last_tag(released_tags)
         remote = os.path.join(released_tags, str(tag))
@@ -271,6 +271,21 @@ class SVNHelper(object):
                 cerr('Aborted')
                 sys.exit(0)
         self.export(remote, local_path)
+        if build_cmd:
+            os.chdir(local_path)
+            cerr("Build cmd: %s" % build_cmd)
+            if interactive and not query_yes_no('execute?', default='yes'):
+                cerr('Aborted')
+                return
+            args = ('/usr/bin/env', 'sh', '-c', build_cmd)
+            stdout, stderr, ret = self.execute(args)
+            cout(stdout)
+            if ret:
+                cerr(stderr)
+                sys.exit(ret)
+            shutil.rmtree(local_path)
+            return
+
         archive_name = '/tmp/%s.tgz' % package_name
         self.tar(archive_name, '/tmp', package_name, quiet=True)
         dest = os.path.join(self.repo_url, self.project_key)
