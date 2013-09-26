@@ -3,8 +3,8 @@
 # Готовит bash-скрипт для осуществления сборки релиза
 #
 # На вход получает следующие файлы:
-#   merge-plan.json: словарь Release -> [task-keys]
-#   integration-tasks.json: словарь Release -> int-task-key
+#   merge-plan.json: словарь {Stable -> {Version -> [task-list]}}
+#   integration-tasks.json: словарь {Version -> int-task-key}
 #
 # На выходе скрипт merge.sh
 #

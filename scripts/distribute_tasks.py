@@ -4,8 +4,8 @@
 #
 # На вход получает файл collected-tasks.txt
 # Дампит в JSON следующие файлы
-#   merge-plan.json: словарь Release -> [task-list]
-#   integration-tasks.json: словарь Release -> int-task-key
+#   merge-plan.json: словарь {Stable -> {Version -> [task-list]}}
+#   integration-tasks.json: словарь {Version -> int-task-key}
 
 
 import sys
