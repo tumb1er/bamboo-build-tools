@@ -36,7 +36,7 @@ VENV_DIR:=$(PROJECT_DIR)/virtualenv
 ACTIVATE=. $(VENV_DIR)/bin/activate
 
 # Команда установки из локального репозитория
-PIP_INSTALL:=pip install -f $(DIST_URL)
+PIP_INSTALL:=pip install --no-index -f $(DIST_URL)
 
 # Команда установки из файла
 PIP_REQUIRES=$(PIP_INSTALL) -r $(SOURCES_DIR)/$(R);
