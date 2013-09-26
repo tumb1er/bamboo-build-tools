@@ -1,0 +1,53 @@
+# coding: utf-8
+
+# Готовит bash-скрипт для осуществления сборки релиза
+#
+# На вход получает следующие файлы:
+#   merge-plan.json: словарь Release -> [task-keys]
+#   integration-tasks.json: словарь Release -> int-task-key
+#
+# На выходе скрипт merge.sh
+#
+
+import os
+import shutil
+import json
+
+f = open('merge-plan.json', 'r')
+merge_plan = json.load(f)
+f.close()
+f = open('integration-tasks.json', 'r')
+integration_tasks = json.load(f)
+f.close()
+package = os.environ['bamboo_Package']
+svn_root = os.environ['SVN_ROOT'].replace('/trunk', '')
+c = open('merge.sh', 'w')
+stable_root = os.path.join(svn_root, 'branches/stable')
+for stable, versions in merge_plan.items():
+    stable_path = os.path.join(stable_root, stable)
+    stable_dir = 'stable-%s' % stable
+    try:
+        shutil.rmtree(stable_dir)
+    except OSError:
+        pass
+    checked_out = False
+    for version, tasks in versions.items():
+        int_task = integration_tasks[version]
+        if not checked_out:
+            c.write("svn-create-stable -t %s %s %s\n" % (svn_root, int_task, stable))
+            c.write("svn co %s %s\n" % (stable_path, stable_dir))
+            c.write("cd %s\n" % stable_dir)
+            checked_out = True
+
+        c.write("yes no | svn-merge-tasks -t %s -i %s %s || exit 252\n" % (svn_root, int_task,
+            ' '.join(tasks)))
+    c.write("cd ..\n")
+for stable, versions in merge_plan.items():
+    stable_dir = 'stable-%s' % stable
+    c.write("cd %s\n" % stable_dir)
+    c.write("svn ci -F commit-message.txt\n")
+    for v in versions.keys():
+        c.write("svn-release -t %s %s %s\n" % (svn_root, int_task, v))
+        c.write("svn-build -t %s %s-%s\n" %(svn_root, package, v))
+    c.write('cd ..\n')
+c.close()
