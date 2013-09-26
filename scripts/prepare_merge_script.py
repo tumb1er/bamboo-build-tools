@@ -47,6 +47,7 @@ for stable, versions in merge_plan.items():
     c.write("cd %s\n" % stable_dir)
     c.write("svn ci -F commit-message.txt\n")
     for v in versions.keys():
+        int_task = integration_tasks[version]
         c.write("svn-release -t %s %s %s\n" % (svn_root, int_task, v))
         c.write("svn-build -t %s %s-%s\n" %(svn_root, package, v))
     c.write('cd ..\n')
