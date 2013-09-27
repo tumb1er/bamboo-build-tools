@@ -55,9 +55,9 @@ for stable, versions in merge_plan.items():
                 "| awk -F '/' '{ print $3 }' | "
                 "egrep -o '%s' > build.txt\n" %(svn_root, package, v, rx))
         c.write("export VERSION=`cat build.txt`\n")
-        c.write('echo "Built $VERSION " > build-message.txt\n"')
-        c.write('echo "%s/%s-test.php?release=$VERSION" >> build-message.txt\n'
+        c.write('echo "Built \\\$VERSION " > build-message.txt\n')
+        c.write('echo "%s/%s-test.php?release=\\\$VERSION" >> build-message.txt\n'
                 % ('http://y.rutube.ru/deploy', package))
-        c.write('build-comment $BUILD_KEY -F build-message.txt\n')
+        c.write('build-comment \$BUILD_KEY -F build-message.txt\n')
     c.write('cd ..\n')
 c.close()
