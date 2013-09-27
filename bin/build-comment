@@ -1,0 +1,30 @@
+# coding: utf-8
+
+# $Id: $
+
+from optparse import OptionParser
+import sys
+from bamboo.helpers import cout
+from bamboo.builds import Builds
+
+
+parser = OptionParser(usage='%prog [options] <build-key>')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='/home/tumbler/pycharm/bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-m", "--message", dest="message",
+                  default=None, help="comment text")
+parser.add_option("-F", "--message-file", dest="message_file",
+                  default=None, help="file with comment text")
+
+options, args = parser.parse_args()
+if len(args) < 1 or not options.message and not options.message_file:
+    parser.print_help()
+    sys.exit(-1)
+builds = Builds(configfile=options.configfile)
+if options.message_file:
+    with open(options.message_file, 'r') as f:
+        message = f.readall()
+else:
+    message = options.message
+builds.add_comment(args[0], message)

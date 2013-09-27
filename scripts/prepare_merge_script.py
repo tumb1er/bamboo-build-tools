@@ -38,10 +38,12 @@ for stable, versions in merge_plan.items():
             c.write("svn co %s %s\n" % (stable_path, stable_dir))
             c.write("cd %s\n" % stable_dir)
             checked_out = True
-
         c.write("yes no | svn-merge-tasks -t %s -i %s %s || exit 252\n" % (svn_root, int_task,
             ' '.join(tasks)))
     c.write("cd ..\n")
+
+rx = "[[:alnum:]]+-[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+-[[:digit:]]+"
+
 for stable, versions in merge_plan.items():
     stable_dir = 'stable-%s' % stable
     c.write("cd %s\n" % stable_dir)
@@ -49,6 +51,13 @@ for stable, versions in merge_plan.items():
     for v in versions.keys():
         int_task = integration_tasks[version]
         c.write("svn-release -t %s %s %s\n" % (svn_root, int_task, v))
-        c.write("svn-build -t %s %s-%s\n" %(svn_root, package, v))
+        c.write("svn-build -t %s %s-%s2>&1 | tail -n1 "
+                "| awk -F '/' '{ print $3 }' | "
+                "egrep -o '%s' > build.txt\n" %(svn_root, package, v, rx))
+        c.write("export VERSION=`cat build.txt`\n")
+        c.write('echo "Built $VERSION " > build-message.txt\n"')
+        c.write('echo "%s/%s-test.php?release=$VERSION" >> build-message.txt\n'
+                % ('http://y.rutube.ru/deploy', package))
+        c.write('build-comment $BUILD_KEY -F build-message.txt\n')
     c.write('cd ..\n')
 c.close()
