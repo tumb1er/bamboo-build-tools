@@ -52,11 +52,12 @@ for stable, versions in merge_plan.items():
         int_task = integration_tasks[version]
         plan_name = int_task.split('-')[0] + '-INT'
         c.write("svn-release -t %s %s %s\n" % (svn_root, int_task, v))
-        c.write("svn-build -t %s %s-%s2>&1 | tail -n1 "
+        c.write("svn-build -t %s %s-%s 2>&1 | tail -n1 "
                 "| awk -F '/' '{ print $3 }' | "
                 "egrep -o '%s' > build.txt\n" %(svn_root, package, v, rx))
-        c.write("export VERSION=`cat build.txt`\n")
-        c.write('echo "%s/%s-test.php?release=\\\$VERSION" >> build-message.txt\n'
+        c.write("export VERSION=\`cat build.txt\`\n")
+        c.write('echo "Built %s-\$VERSION " > build-message.txt\n' % package)
+        c.write('echo "%s/%s-test.php?release=\$VERSION" >> build-message.txt\n'
                 % ('http://y.rutube.ru/deploy', package))
         c.write('build-comment -c /data/bamboo.cfg %s-\$BUILD_NUMBER -F build-message.txt\n' % plan_name)
     c.write('cd ..\n')
