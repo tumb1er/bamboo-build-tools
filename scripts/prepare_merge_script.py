@@ -42,7 +42,7 @@ for stable, versions in merge_plan.items():
             ' '.join(tasks)))
     c.write("cd ..\n")
 
-rx = "[[:alnum:]]+-[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+-[[:digit:]]+"
+rx = "[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+-[[:digit:]]+"
 
 for stable, versions in merge_plan.items():
     stable_dir = 'stable-%s' % stable
