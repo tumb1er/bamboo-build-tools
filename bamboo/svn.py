@@ -20,6 +20,10 @@ class SVNHelper(object):
     stable_dir = 'branches/stable'
     tags_dir = 'tags/release'
     commit_message_filename = 'commit-message.txt'
+    smart_commits = (
+        (r'\+(review\s[A-Z]+-CR(-[\d]+)?)', r'\1'),
+        (r'#(developed|reviewed)', r'\1'),
+    )
 
     def __init__(self, project_key, configfile='bamboo.cfg', root='^'):
         self.project_key = project_key
@@ -207,6 +211,7 @@ class SVNHelper(object):
                 jira_task = '%s-%s' % (self.project_key, t)
                 if jira_task not in tasks:
                     continue
+                msg = self.remove_smart_commits(msg)
                 commit_msg_file.write('r%s %s %s\n' % (r, jira_task, msg))
                 args = ('merge', '--non-interactive', '-c', 'r%s' % r, source)
                 self.svn(args)
@@ -331,5 +336,10 @@ class SVNHelper(object):
         stdout, stderr, return_code = self.svn(args)
         if return_code != 0:
             raise SVNError(stderr)
+
+    def remove_smart_commits(self, msg):
+        for regex, subst in self.smart_commits:
+            msg = re.sub(regex, subst, msg)
+        return msg
 
 
