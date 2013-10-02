@@ -115,10 +115,14 @@ class SVNHelper(object):
             cerr("Stable already exists")
             return
 
-        source = self.compute_stable_source(stable)
         if branch:
+            svn_base = re.sub('trunk/?$', '', self.project_root)
+            branch = re.sub('^\^/?', '', branch)
+            branch = os.path.join(svn_base, branch)
             cerr('Source overriden from command line: %s' % branch)
-            source = branch
+            source = branch.replace('^', self.project_root)
+        else:
+            source = self.compute_stable_source(stable)
         if not source.endswith('trunk'):
             if not self.check_dir_exists(source):
                 raise SVNError("Source for stable does not exists")

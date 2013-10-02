@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='bamboo-build-tools',
-    version='1.1.0',
+    version='1.2.0',
     packages=['bamboo'],
     url='http://rutube.ru',
     license='Beer Licence',
