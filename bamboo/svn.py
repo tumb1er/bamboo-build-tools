@@ -294,8 +294,8 @@ class SVNHelper(object):
                 cerr(stderr)
                 sys.exit(ret)
             if terminate:
+                shutil.rmtree(local_path)
                 return
-            shutil.rmtree(local_path)
 
         archive_name = '/tmp/%s.tgz' % package_name
         self.tar(archive_name, '/tmp', package_name, quiet=True)
