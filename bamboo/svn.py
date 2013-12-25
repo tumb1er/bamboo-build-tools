@@ -281,7 +281,6 @@ class SVNHelper(object):
         self.export(remote, local_path)
         if build_cmd:
             os.environ['PACKAGE'] = package_name
-            cwd = os.getcwd()
             os.chdir(local_path)
             cerr("Build cmd: %s" % build_cmd)
             cerr("Package name: %s" % package_name)
@@ -294,10 +293,9 @@ class SVNHelper(object):
             if ret:
                 cerr(stderr)
                 sys.exit(ret)
-            shutil.rmtree(local_path)
             if terminate:
                 return
-            os.chdir(cwd)
+            shutil.rmtree(local_path)
 
         archive_name = '/tmp/%s.tgz' % package_name
         self.tar(archive_name, '/tmp', package_name, quiet=True)
