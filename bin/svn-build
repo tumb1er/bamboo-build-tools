@@ -21,6 +21,7 @@ parser.add_option("-b", "--build-cmd", dest="build_cmd", default=None,
 parser.add_option("-i", "--interactive", dest="interactive", default=False,
                   action="store_true", help="confirm actions")
 parser.add_option("-e", "--end", dest="terminate", default=False,
+                  action="store_true",
                   help="end execution after build command line")
 options, args = parser.parse_args()
 if len(args) < 1:
