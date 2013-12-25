@@ -20,6 +20,8 @@ parser.add_option("-b", "--build-cmd", dest="build_cmd", default=None,
                   help="build command line")
 parser.add_option("-i", "--interactive", dest="interactive", default=False,
                   action="store_true", help="confirm actions")
+parser.add_option("-t", "--terminame", dest="terminate", default=False,
+                  help="terminate after build command line")
 options, args = parser.parse_args()
 if len(args) < 1:
     parser.print_usage()
@@ -31,4 +33,5 @@ if not m:
 project = m.group(1)
 release = m.group(2)
 svn = SVNHelper(project, root=options.root, configfile=options.configfile)
-svn.build(release, interactive=options.interactive, build_cmd=options.build_cmd)
+svn.build(release, interactive=options.interactive, build_cmd=options.build_cmd,
+          terminate=options.terminate)

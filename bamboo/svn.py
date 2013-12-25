@@ -265,7 +265,7 @@ class SVNHelper(object):
         stable = get_stable(release)
         return os.path.join(self.project_root, self.stable_dir, stable)
 
-    def build(self, release, interactive=False, build_cmd=None):
+    def build(self, release, interactive=False, build_cmd=None, terminate=False):
         released_tags = os.path.join(self.project_root, self.tags_dir, release)
         tag = '%02d' % self.get_last_tag(released_tags)
         remote = os.path.join(released_tags, str(tag))
@@ -294,7 +294,8 @@ class SVNHelper(object):
                 cerr(stderr)
                 sys.exit(ret)
             shutil.rmtree(local_path)
-            return
+            if terminate:
+                return
 
         archive_name = '/tmp/%s.tgz' % package_name
         self.tar(archive_name, '/tmp', package_name, quiet=True)
