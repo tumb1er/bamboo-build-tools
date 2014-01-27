@@ -1,6 +1,7 @@
 # coding: utf-8
 
 # $Id: $
+import contextlib
 import re
 import sys
 import os.path
@@ -70,3 +71,14 @@ def get_stable(release, all=False):
         result.add(re.sub(r'([\d]+)\.([\d]+)\.x', '\\1.x', stable))
         return list(result)
     return stable
+
+
+@contextlib.contextmanager
+def chdir(dirname=None):
+    curdir = os.getcwd()
+    try:
+        if dirname is not None:
+            os.chdir(dirname)
+        yield
+    finally:
+        os.chdir(curdir)

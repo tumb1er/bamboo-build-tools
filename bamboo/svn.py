@@ -188,7 +188,8 @@ class SVNHelper(object):
         if return_code != 0:
             raise SVNError(stderr)
 
-    def merge_tasks(self, task_key, tasks, branch='trunk', interactive=False):
+    def merge_tasks(self, task_key, tasks, branch='trunk', interactive=False,
+                    dry_run=False):
         if not tasks:
             raise ValueError('No tasks requested')
         self.revert_working_copy()
@@ -228,8 +229,8 @@ class SVNHelper(object):
                                        found_msg='Merged tasks:')
 
         self.check_for_conflicts()
-
-        self.svn_commit(interactive)
+        if not dry_run:
+            self.svn_commit(interactive)
 
     def get_last_tag(self, tags_dir):
         args = ('ls', tags_dir)
@@ -251,6 +252,7 @@ class SVNHelper(object):
         msg = '%s create tag %s-%s' % (task_key, release, new_tag)
         self.svn_copy(stable, tag, task_key, message=msg,
                       interactive=interactive)
+        return new_tag
 
     def makedir(self, path, task_key, interactive=False):
         args = ('mkdir', '--parents', path, '-m',

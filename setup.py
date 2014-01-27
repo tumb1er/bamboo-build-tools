@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='bamboo-build-tools',
-    version='1.4.0',
+    version='2.0.0',
     packages=['bamboo'],
     url='http://rutube.ru',
     license='Beer Licence',
@@ -10,6 +10,7 @@ setup(
     author_email='stikhonov@rutube.ru',
     scripts=[
         'bin/bbt-deploy',
+        'bin/bbt-integrate',
         'bin/bbt-test',
         'bin/build-comment',
         'bin/coverage2clover',

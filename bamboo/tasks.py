@@ -72,3 +72,13 @@ class Tasks(object):
             ('status', issue.fields.status.name),
         )
         return result
+
+    def move(self, task_key, transition_name):
+        transition_name = transition_name.lower().replace(' ', '-')
+        transitions = self.get_transitions(task_key)
+        for trans in transitions:
+            name = trans['to']['name'].lower().replace(' ', '-')
+            if name == transition_name:
+                self.transition(task_key, trans['id'])
+                return True
+        return False
