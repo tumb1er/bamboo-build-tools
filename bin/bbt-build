@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# $Id: $
+from optparse import OptionParser
+import os
+import re
+import sys
+from bamboo.builds import Builds
+from bamboo.svn import SVNHelper
+
+
+RELEASE_RX = r'^[\d]+\.[\d]+\.[\d]+-[\d]+$'
+
+
+parser = OptionParser(usage='%prog [options] build-key release-tag')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-t", "--root", dest="root", default="^",
+                  help="svn project root location")
+parser.add_option("-i", "--interactive", dest="interactive", default=False,
+                  action="store_true", help="confirm actions")
+parser.add_option("-p", "--package", dest="package",
+                  help="package name")
+parser.add_option("-b", "--integration-build", dest="build",
+                  help="integration build key")
+parser.add_option("-x", "--execute", dest="build_cmd",
+                  help="execute command for building package")
+
+options, args = parser.parse_args()
+if len(args) < 2:
+    parser.print_usage()
+    sys.exit(-1)
+
+try:
+    build_key = args[0]
+    project_key = build_key.split('-')[0]
+except:
+    print >> sys.stderr, "Invalid build key (expected: PROJ-INT-123)"
+    sys.exit(-1)
+
+release_tag = args[1]
+if not re.match(RELEASE_RX, release_tag):
+    print >> sys.stderr, "Invalid release tag (expected: 1.0.0-01)"
+    sys.exit(-1)
+
+version, build = release_tag.split('-')
+
+svn = SVNHelper(options.package, root=options.root,
+                configfile=options.configfile, temp_dir=os.getcwd())
+builds = Builds(configfile=options.configfile)
+
+svn.build(version, interactive=options.interactive, build_cmd=options.build_cmd,
+          terminate=True, build=build)
+
+release_url = 'http://y.rutube.ru/vrepo/%s-test.php?release=%s-%s' % (
+    options.package, version, build
+)
+builds.add_comment(build_key, release_url)

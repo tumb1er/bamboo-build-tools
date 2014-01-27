@@ -2,13 +2,14 @@ from distutils.core import setup
 
 setup(
     name='bamboo-build-tools',
-    version='2.0.0',
+    version='2.1.0',
     packages=['bamboo'],
     url='http://rutube.ru',
     license='Beer Licence',
     author='tumbler',
     author_email='stikhonov@rutube.ru',
     scripts=[
+        'bin/bbt-build',
         'bin/bbt-deploy',
         'bin/bbt-integrate',
         'bin/bbt-test',

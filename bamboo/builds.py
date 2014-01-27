@@ -4,7 +4,6 @@
 import json
 from jira.client import JIRA, translate_resource_args
 from jira.exceptions import raise_on_error
-from jira.resources import Comment
 from bamboo.helpers import parse_config
 
 
@@ -27,3 +26,15 @@ class Builds(object):
         r = self.jira._session.post(url, headers={'content-type':'application/json'}, data=json.dumps(data))
         raise_on_error(r)
 
+    @translate_resource_args
+    def run_plan(self, plan, **extra_variables):
+        params = None
+        if extra_variables:
+            params = {}
+            for k, v in extra_variables.items():
+                params['bamboo.variable.%s' % k] = v
+        url = self.jira._get_url('queue/%s' % plan)
+        print "POST %s" % url
+        r = self.jira._session.post(url, headers={'content-type':'application/json'},
+                                    params=params, data=json.dumps({}))
+        raise_on_error(r)

@@ -25,10 +25,12 @@ class SVNHelper(object):
         (r'#(developed|reviewed)', r'\1'),
     )
 
-    def __init__(self, project_key, configfile='bamboo.cfg', root='^'):
+    def __init__(self, project_key, configfile='bamboo.cfg', root='^',
+                 temp_dir='/tmp'):
         self.project_key = project_key
         self.project_root = root
         self.repo_url = 'http://y.rutube.ru/vrepo/'
+        self.temp_dir = temp_dir
         parse_config(self, configfile)
 
     def log_tasks(self, revision, branch='^/trunk'):
@@ -267,12 +269,13 @@ class SVNHelper(object):
         stable = get_stable(release)
         return os.path.join(self.project_root, self.stable_dir, stable)
 
-    def build(self, release, interactive=False, build_cmd=None, terminate=False):
+    def build(self, release, interactive=False, build_cmd=None, terminate=False,
+              build=None):
         released_tags = os.path.join(self.project_root, self.tags_dir, release)
-        tag = '%02d' % self.get_last_tag(released_tags)
+        tag = build or '%02d' % self.get_last_tag(released_tags)
         remote = os.path.join(released_tags, str(tag))
         package_name = '%s-%s-%s' % (self.project_key, release, tag)
-        local_path = os.path.join('/tmp', package_name)
+        local_path = os.path.join(self.temp_dir, package_name)
         if os.path.exists(local_path):
             if not interactive or query_yes_no('remove %s?' % local_path,
                                                default='yes'):
@@ -299,8 +302,8 @@ class SVNHelper(object):
                 shutil.rmtree(local_path)
                 return
 
-        archive_name = '/tmp/%s.tgz' % package_name
-        self.tar(archive_name, '/tmp', package_name, quiet=True)
+        archive_name = os.path.join(self.temp_dir, '%s.tgz' % package_name)
+        self.tar(archive_name, self.temp_dir, package_name, quiet=True)
         dest = os.path.join(self.repo_url, self.project_key)
         if not dest.endswith('/'):
             dest += '/'

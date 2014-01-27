@@ -66,14 +66,15 @@ if len(args) < 1:
     sys.exit(-1)
 
 try:
-    project_key = args[0].split('-')[0]
+    build_key = args[0]
+    project_key = build_key.split('-')[0]
 except:
     print >> sys.stderr, "Invalid build key (expected: PROJ-INT-123)"
     sys.exit(-1)
 
 jira = Tasks(configfile=options.configfile)
 svn = SVNHelper(project_key, root=options.root, configfile=options.configfile)
-# builds = Builds(configfile=options.configfile)
+builds = Builds(configfile=options.configfile)
 
 
 # Ищем задачи, подлежащие сборке
@@ -92,8 +93,8 @@ def finalize(dest_status="Integrated", exit_code=0):
     # выходит из питона.
     for task_key in tasks:
         assignee = task_assignees[task_key]
-        jira.assign(task_key, assignee=assignee)
         jira.move(task_key, dest_status)
+        jira.assign(task_key, assignee=assignee)
     sys.exit(exit_code)
 
 
@@ -226,6 +227,10 @@ for stable, data in merge_plan.items():
 if failed:
     finalize(dest_status='Integration broken', exit_code=-1)
 
+# Выделяем build key из job key
+build_number = build_key.split('-')[-1]
+integration_build = '%s-INT-%s' % (project_key, build_number)
+
 # коммитим изменения в stable, создаем теги
 for stable, data in merge_plan.items():
     version, tasks = data
@@ -237,6 +242,8 @@ for stable, data in merge_plan.items():
         tag = svn.release(int_task.key, version,
                           interactive=options.interactive)
     build = '%s-%s' % (version, tag)
-    print "Built tag %s" % build
+    plan_name = '%s-BLD' % project_key
+    builds.run_plan(plan_name, ReleaseTag=build,
+                    IntegrationBuild=integration_build)
 
 finalize(dest_status="Integrated")
