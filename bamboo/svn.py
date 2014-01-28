@@ -270,7 +270,7 @@ class SVNHelper(object):
         return os.path.join(self.project_root, self.stable_dir, stable)
 
     def build(self, release, interactive=False, build_cmd=None, terminate=False,
-              build=None):
+              build=None, cleanup=True):
         released_tags = os.path.join(self.project_root, self.tags_dir, release)
         tag = build or '%02d' % self.get_last_tag(released_tags)
         remote = os.path.join(released_tags, str(tag))
@@ -299,7 +299,8 @@ class SVNHelper(object):
                 cerr(stderr)
                 sys.exit(ret)
             if terminate:
-                shutil.rmtree(local_path)
+                if cleanup:
+                    shutil.rmtree(local_path)
                 return
 
         archive_name = os.path.join(self.temp_dir, '%s.tgz' % package_name)
@@ -308,8 +309,10 @@ class SVNHelper(object):
         if not dest.endswith('/'):
             dest += '/'
         self.upload(archive_name, dest, interactive=interactive)
-        shutil.rmtree(local_path)
-        os.unlink(archive_name)
+        if cleanup:
+            cout("cleanup")
+            shutil.rmtree(local_path)
+            os.unlink(archive_name)
 
     def tar(self, archive, chdir, folder, quiet=False):
         args = ('/usr/bin/env', 'tar', 'czf', archive, '-C', chdir, folder)

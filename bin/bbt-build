@@ -27,6 +27,9 @@ parser.add_option("-b", "--integration-build", dest="build",
                   help="integration build key")
 parser.add_option("-x", "--execute", dest="build_cmd",
                   help="execute command for building package")
+parser.add_option("-e", "--exit", dest="terminate", default=False,
+                  action="store_true",
+                  help="exit after build command execution")
 
 options, args = parser.parse_args()
 if len(args) < 2:
@@ -52,7 +55,7 @@ svn = SVNHelper(options.package, root=options.root,
 builds = Builds(configfile=options.configfile)
 
 svn.build(version, interactive=options.interactive, build_cmd=options.build_cmd,
-          terminate=True, build=build)
+          terminate=options.terminate, build=build, cleanup=False)
 
 release_url = 'http://y.rutube.ru/vrepo/%s-test.php?release=%s-%s' % (
     options.package, version, build
