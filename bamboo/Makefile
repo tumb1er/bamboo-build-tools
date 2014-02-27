@@ -10,6 +10,8 @@ DATA_DIR:=/data
 # Ссылка на локальный репозиторий
 DIST_URL:=http://y.rutube.ru/vrepo/dist
 
+DIST_URL_ARGS:=$(foreach F, $(DIST_URL), -f $(F))
+
 # Текущая рабочая директория
 WORKING_DIR:=$(shell pwd)
 
@@ -32,11 +34,20 @@ PROJECT_DIR:=$(DATA_DIR)/$(PROJECT_NAME)
 # Директория виртуального окружения
 VENV_DIR:=$(PROJECT_DIR)/virtualenv
 
+# Интерпретатор для виртуального окружения
+PYTHON=
+
+ifdef PYTHON
+    VENV_ARGS:=-p $(PYTHON)
+else
+    VENV_ARGS:=
+endif
+
 # Команда активации виртуального окружения
 ACTIVATE=. $(VENV_DIR)/bin/activate
 
 # Команда установки из локального репозитория
-PIP_INSTALL:=pip install --no-index -f $(DIST_URL)
+PIP_INSTALL:=pip install --no-index $(DIST_URL_ARGS)
 
 # Команда установки из файла
 PIP_REQUIRES=$(PIP_INSTALL) -r $(SOURCES_DIR)/$(R);
@@ -184,7 +195,7 @@ project_dir:
 deploy-basic: virtualenv requires
 
 virtualenv:
-	virtualenv --system-site-packages $(VENV_DIR)
+	virtualenv --system-site-packages $(VENV_ARGS) $(VENV_DIR)
 
 requires:
 	$(ACTIVATE); $(foreach R, $(REQUIRES), $(PIP_REQUIRES))

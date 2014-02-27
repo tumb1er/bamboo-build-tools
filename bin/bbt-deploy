@@ -13,6 +13,8 @@ parser.add_option("-d", "--deploy", dest="deploy", help="install type",
                   choices=('devel', 'test', 'production', 'tools'))
 parser.add_option("-s", "--sources", dest="sources", default=None,
                   help="project sources directory")
+parser.add_option("-p", "--python", dest="python", default=None,
+                  help="python interpreter")
 parser.add_option("-l", "--local-virtualenv", dest="local_venv", default=False,
                   action="store_true", help="create virtualenv in local dir")
 parser.add_option("-g", "--gmake", dest="gmake", default=False,
@@ -29,7 +31,8 @@ if args[0] == 'help':
     parser.print_help()
     sys.exit()
 runner = MakeRunner(args[0], configfile=options.configfile, gmake=options.gmake,
-                    sources=options.sources, local_venv=options.local_venv)
+                    sources=options.sources, local_venv=options.local_venv,
+                    python=options.python)
 
 if options.deploy == 'production':
     runner.install_production()

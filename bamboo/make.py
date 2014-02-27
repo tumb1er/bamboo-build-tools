@@ -36,10 +36,11 @@ class MakeRunner(object):
     )
 
     def __init__(self, project_name, configfile='bamboo.cfg', sources=None,
-                 local_venv=False, gmake=False):
+                 local_venv=False, gmake=False, python=None):
         self.requires = {}
         self.make = 'gmake' if gmake else 'make'
         self.include = ()
+        self.python = python
         self.extra_targets = {}
 
         parse_config(self, configfile)
@@ -85,6 +86,8 @@ class MakeRunner(object):
             '-e',
             'PROJECT_NAME=%s' % self.project_name,
         )
+        if self.python:
+            make_args += ('-e', 'PYTHON=%s' % self.python)
         if self.sources:
             make_args += ('-e', 'SOURCES_DIR="%s"' % self.sources)
         if self.local_venv:
