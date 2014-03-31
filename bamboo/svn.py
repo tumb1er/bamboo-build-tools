@@ -31,6 +31,8 @@ class SVNHelper(object):
         self.project_root = root
         self.repo_url = 'http://y.rutube.ru/vrepo/'
         self.temp_dir = temp_dir
+        self.svn_username = 'bamboo'
+        self.svn_password = 'bamboo'
         parse_config(self, configfile)
 
     def log_tasks(self, revision, branch='^/trunk'):
@@ -73,7 +75,17 @@ class SVNHelper(object):
 
     def svn(self, args, quiet=False):
         args = ('/usr/bin/env', 'svn') + args
-        return self.execute(args, quiet)
+        if not quiet:
+            sys.stderr.write(' '.join(
+                '"%s"' % a if ' ' in a else a for a in args[1:]) + '\n')
+        args = (
+            ('/usr/bin/env', 'svn')
+            + ('--username', self.svn_username, '--password', self.svn_password)
+            + args
+        )
+        p = Popen(args, stdout=PIPE, stderr=PIPE, env=os.environ)
+        stdout, stderr = p.communicate()
+        return stdout, stderr, p.returncode
 
     def compute_stable_source(self, stable):
         parts = stable.split('.')
