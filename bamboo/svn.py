@@ -74,7 +74,6 @@ class SVNHelper(object):
             cout('%s-%s: %s' % (self.project_key, task, ','.join(revisions)))
 
     def svn(self, args, quiet=False):
-        args = ('/usr/bin/env', 'svn') + args
         if not quiet:
             sys.stderr.write(' '.join(
                 '"%s"' % a if ' ' in a else a for a in args[1:]) + '\n')
