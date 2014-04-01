@@ -227,9 +227,9 @@ coverage-django-tests: clean-reports report-dir
 coverage-twisted-tests: clean-reports report-dir
 	echo "Running Twisted tests with coverage"
 	$(ACTIVATE); $(COVERAGE_CMD) $(TRIAL_CMD) $(QUITE_CMD)
-	python -m coverage combine
-	python -m coverage xml -o $(COVERAGE_XML)
-	python -m coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
+	$(ACTIVATE); python -m coverage combine
+	$(ACTIVATE); python -m coverage xml -o $(COVERAGE_XML)
+	$(ACTIVATE); python -m coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
 	coverage2clover -i $(COVERAGE_XML) -o $(CLOVER_XML)
 
 run-django-tests:
