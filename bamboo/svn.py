@@ -23,6 +23,7 @@ class SVNHelper(object):
     smart_commits = (
         (r'\+(review\s[A-Z]+-CR(-[\d]+)?)', r'\1'),
         (r'#(developed|reviewed)', r'\1'),
+        (r'@\w+', r'\1'),
     )
 
     def __init__(self, project_key, configfile='bamboo.cfg', root='^',
@@ -75,8 +76,8 @@ class SVNHelper(object):
 
     def svn(self, args, quiet=False):
         if not quiet:
-            sys.stderr.write(' '.join(
-                '"%s"' % a if ' ' in a else a for a in args[1:]) + '\n')
+            sys.stderr.write('svn ' + ' '.join(
+                '"%s"' % a if ' ' in a else a for a in args) + '\n')
         args = (
             ('/usr/bin/env', 'svn')
             + ('--username', self.svn_username, '--password', self.svn_password)
