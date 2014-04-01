@@ -219,9 +219,9 @@ rcscripts:
 coverage-django-tests: clean-reports report-dir
 	echo "Running Django tests with coverage"
 	$(ACTIVATE); $(COVERAGE_CMD) $(MANAGE_CMD) $(DJANGO_APPS) $(QUITE_CMD)
-	python -m coverage combine
-	python -m coverage xml -o $(COVERAGE_XML)
-	python -m coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
+	$(ACTIVATE); python -m coverage combine
+	$(ACTIVATE); python -m coverage xml -o $(COVERAGE_XML)
+	$(ACTIVATE); python -m coverage html -d $(COVERAGE_HTML) $(REPORT_ARGS)
 	coverage2clover -i $(COVERAGE_XML) -o $(CLOVER_XML)
 
 coverage-twisted-tests: clean-reports report-dir
