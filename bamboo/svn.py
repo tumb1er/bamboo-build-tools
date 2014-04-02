@@ -33,7 +33,7 @@ class SVNHelper(object):
         self.repo_url = 'http://y.rutube.ru/vrepo/'
         self.temp_dir = temp_dir
         self.svn_username = 'bamboo'
-        self.svn_password = 'bamboo'
+        self.svn_password = None
         parse_config(self, configfile)
 
     def log_tasks(self, revision, branch='^/trunk'):
@@ -78,11 +78,17 @@ class SVNHelper(object):
         if not quiet:
             sys.stderr.write('svn ' + ' '.join(
                 '"%s"' % a if ' ' in a else a for a in args) + '\n')
-        args = (
-            ('/usr/bin/env', 'svn')
-            + ('--username', self.svn_username, '--password', self.svn_password)
-            + args
-        )
+        if self.svn_password:
+            args = (
+                ('/usr/bin/env', 'svn')
+                + ('--username', self.svn_username, '--password', self.svn_password)
+                + args
+            )
+        else:
+            args = (
+                ('/usr/bin/env', 'svn')
+                + args
+            )
         p = Popen(args, stdout=PIPE, stderr=PIPE, env=os.environ)
         stdout, stderr = p.communicate()
         return stdout, stderr, p.returncode
