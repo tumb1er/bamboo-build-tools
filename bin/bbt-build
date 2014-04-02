@@ -57,7 +57,7 @@ builds = Builds(configfile=options.configfile)
 svn.build(version, interactive=options.interactive, build_cmd=options.build_cmd,
           terminate=options.terminate, build=build, cleanup=False)
 
-release_url = 'http://y.rutube.ru/vrepo/%s-test.php?release=%s-%s' % (
+release_url = 'http://y.rutube.ru/deploy/%s-test.php?release=%s-%s' % (
     options.package, version, build
 )
 builds.add_comment(build_key, release_url)
