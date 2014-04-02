@@ -23,7 +23,7 @@ class SVNHelper(object):
     smart_commits = (
         (r'\+(review\s[A-Z]+-CR(-[\d]+)?)', r'\1'),
         (r'#(developed|reviewed)', r'\1'),
-        (r'@\w+', r'\1'),
+        (r'@(\w+)', r'\1'),
     )
 
     def __init__(self, project_key, configfile='bamboo.cfg', root='^',
