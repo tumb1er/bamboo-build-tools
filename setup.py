@@ -31,6 +31,6 @@ setup(
     description='python build tools for Atlassian Bamboo',
     install_requires=[
         'lxml',
-        'jira-python'
+        'jira'
     ],
 )
