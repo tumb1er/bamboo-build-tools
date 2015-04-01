@@ -3,7 +3,7 @@
 # $Id: $
 import json
 from jira.client import JIRA, translate_resource_args
-from jira.exceptions import raise_on_error
+from jira.utils import raise_on_error
 from bamboo.helpers import parse_config
 
 
