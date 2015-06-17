@@ -8,7 +8,7 @@
 DATA_DIR:=/data
 
 # Ссылка на локальный репозиторий
-DIST_URL:=http://y.rutube.ru/vrepo/dist
+DIST_URL:=https://y.rutube.ru/vrepo/dist
 
 DIST_URL_ARGS:=$(foreach F, $(DIST_URL), -f $(F))
 
