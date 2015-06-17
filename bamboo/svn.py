@@ -30,7 +30,7 @@ class SVNHelper(object):
                  temp_dir='/tmp'):
         self.project_key = project_key
         self.project_root = root
-        self.repo_url = 'http://y.rutube.ru/vrepo/'
+        self.repo_url = 'https://y.rutube.ru/vrepo/'
         self.temp_dir = temp_dir
         self.svn_username = 'bamboo'
         self.svn_password = None
