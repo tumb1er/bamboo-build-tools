@@ -180,9 +180,13 @@ class Clover(object):
                     ncloc=str(c.ncloc))
                 class_info.append(metrics)
         project_metrics.set('classes', str(classes))
-        if isinstance(file_like_object, file):
+
+        if isinstance(file_like_object, six.string_types):
+            f = open(file_like_object, 'wb')
+        elif is_file(file_like_object):
             f = file_like_object
         else:
-            f = open(file_like_object, 'w')
+            raise ValueError('Unexpected parameter: %r' % file_like_object)
+
         etree.ElementTree(root).write(f, encoding='utf-8', xml_declaration=True)
         f.close()
