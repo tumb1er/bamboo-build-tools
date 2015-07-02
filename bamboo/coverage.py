@@ -2,10 +2,17 @@
 
 # $Id: $
 from datetime import datetime
+import os
+import six
 from lxml import etree
 import re
 import subprocess
 
+try:
+    is_file = lambda x: isinstance(x, file)  # For python < 3.x
+except NameError:
+    import io
+    is_file = lambda x: isinstance(x, io.IOBase)  # For python >= 3.x
 
 class Package(object):
     def __init__(self, name):
@@ -71,10 +78,13 @@ class Cobertura(object):
         self.ncloc += p.ncloc
 
     def open(self, file_like_object):
-        if isinstance(file_like_object, file):
+        if isinstance(file_like_object, six.string_types) and os.path.isfile(file_like_object):
+            f = open(file_like_object, 'r')
+        elif is_file(file_like_object):
             f = file_like_object
         else:
-            f = open(file_like_object, 'r')
+            raise ValueError('Unexpected parameter: %r' % file_like_object)
+
         root = etree.parse(f).getroot()
         f.close()
         timestamp = float(root.get('timestamp')) / 1000
