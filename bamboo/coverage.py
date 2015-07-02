@@ -49,7 +49,7 @@ class Class(object):
 
     def count_loc(self):
         output = subprocess.check_output(['wc', '-l', self.filename])
-        m = re.match(r'^[\s]*([\d]+).*', output)
+        m = re.match(b'^[\s]*([\d]+).*', output)
         self.loc = int(m.group(1))
 
 
