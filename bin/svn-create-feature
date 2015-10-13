@@ -31,7 +31,8 @@ project_key = m.group(1)
 
 svn = SVNHelper(project_key, root=options.root, configfile=options.configfile)
 source = os.path.join(svn.project_root, options.branch)
-destination = os.path.join(svn.project_root, "branches", "{0}".format(args[0]))
+destination = os.path.join(svn.project_root, svn.features_dir,
+                           "{0}".format(args[0]))
 
 if svn.check_dir_exists(destination):
     cerr('Path already exists: {0}'.format(destination))

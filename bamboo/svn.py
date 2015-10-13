@@ -17,7 +17,9 @@ class SVNError(Exception):
 class SVNHelper(object):
     """ Работа с JIRA-задачами в SVN."""
 
+    trunk_dir = 'trunk'
     stable_dir = 'branches/stable'
+    features_dir = 'branches/feature'
     tags_dir = 'tags/release'
     commit_message_filename = 'commit-message.txt'
     smart_commits = (
@@ -190,13 +192,18 @@ class SVNHelper(object):
         if return_code != 0:
             raise SVNError(stderr)
 
-    def merge(self, source, reintegrate=False, interactive=False):
+    def merge(self, source, reintegrate=False, interactive=False,
+              revision=None):
         """ Выполняет команду merge
         """
         args = ['merge']
         if not interactive:
             args.append('--non-interactive')
-        if reintegrate:
+        if revision is not None:
+            revision = str(revision)
+            flag = '-r' if revision.find(':') else '-c'
+            args.extend([flag, revision])
+        elif reintegrate:
             args.append('--reintegrate')
         args.extend([source, '.'])
         stdout, stderr, return_code = self.svn(args)
@@ -293,8 +300,7 @@ class SVNHelper(object):
                     continue
                 msg = self.remove_smart_commits(msg)
                 commit_msg_file.write('r%s %s %s\n' % (r, jira_task, msg))
-                args = ('merge', '--non-interactive', '-c', 'r%s' % r, source)
-                self.svn(args)
+                self.merge(source, revision=r)
             commit_msg_file.flush()
             commit_msg_file.seek(0)
             merged = []

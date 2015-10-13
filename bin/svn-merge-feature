@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+import os
 
 import re
 import sys
@@ -61,11 +62,13 @@ if tinfo['status'].lower() != 'merging':
         TASK_KEY, tinfo['status']))
     sys.exit(-3)
 
-feature_branch = '^/branches/' + TASK_KEY
+feature_branch = os.path.join(svn.project_root, svn.features_dir,
+                              "{0}".format(TASK_KEY))
 if not svn.check_dir_exists(feature_branch):
     cerr("Feature branch '{0} doesn`t exists'".format(feature_branch))
     sys.exit(-4)
 
-svn.switch('^/trunk')
+trunk = os.path.join(svn.project_root, svn.trunk_dir)
+svn.switch(trunk)
 svn.reintegrate_feature(TASK_KEY, feature_branch)
 tasks.move(TASK_KEY, 'merged')
