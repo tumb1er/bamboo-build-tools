@@ -40,7 +40,7 @@ ISSUE_TYPES = (
 )
 
 # статусы задач для интеграции
-ISSUE_STATUS = ("Integrating", "Integration Broken")
+ISSUE_STATUS = ("Integrating",)
 
 # пользователь для сборки
 INTEGRATION_USER = "bamboo"
