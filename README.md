@@ -32,6 +32,32 @@ Rules for stable creation are following:
 1. Major stables are created from trunk
 2. Minor stable 1.1.x is created from last build of 1.1.0 tag.
 
+### svn-create-feature
+Create feature branch from `trunk`.
+ 
+#### Example:
+> svn-create-feature -t http://svn.example.org/project PROJ-10 
+
+PROJ-10 - feature task key. Feature branch will be placed at `^/branches/feature` by default.
+Feature location can be overridden with `bamboo.cfg`
+
+### svn-merge-feature
+Reintegrate feature branch into `trunk`. This is opposite to `svn-create-feature`  
+ 
+#### Example:
+> svn-merge-feature -t http://svn.example.org/project PROJ-10 
+
+PROJ-10 - feature task key/ Task must moved to `Merging` status before command start.
+
+Actions:
+
+1. merge feature branch with reintegrate option
+2. delete feature branch
+3. move task to `Merged` status
+
+
+
+
 #### Other options:
 * **-b** you can choose branch to copy from
 * **-i** interactive mode, asks before commits

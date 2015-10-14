@@ -20,6 +20,8 @@ setup(
         'bin/svn-merge-tasks',
         'bin/svn-release',
         'bin/svn-build',
+        'bin/svn-create-feature',
+        'bin/svn-merge-feature',
         'bin/task-search',
         'bin/task-versions',
         'bin/task-assign',

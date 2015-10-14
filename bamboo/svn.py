@@ -17,7 +17,9 @@ class SVNError(Exception):
 class SVNHelper(object):
     """ Работа с JIRA-задачами в SVN."""
 
+    trunk_dir = 'trunk'
     stable_dir = 'branches/stable'
+    features_dir = 'branches/feature'
     tags_dir = 'tags/release'
     commit_message_filename = 'commit-message.txt'
     smart_commits = (
@@ -75,6 +77,8 @@ class SVNHelper(object):
             cout('%s-%s: %s' % (self.project_key, task, ','.join(revisions)))
 
     def svn(self, args, quiet=False):
+        if not isinstance(args, tuple):
+            args = tuple(args)
         if not quiet:
             sys.stderr.write('svn ' + ' '.join(
                 '"%s"' % a if ' ' in a else a for a in args) + '\n')
@@ -168,6 +172,44 @@ class SVNHelper(object):
         if return_code != 0:
             raise SVNError(stderr)
 
+    def delete(self, path_or_url, interactive=False, message=''):
+        cerr('Deleting path: {0}'.format(path_or_url))
+        args = ['delete']
+        if message is not None:
+            args.extend(['-m', message])
+        if not interactive:
+            args.append('--non-interactive')
+        args.append(path_or_url)
+
+        stdout, stderr, return_code = self.svn(args)
+        if return_code != 0:
+            raise SVNError(stderr)
+
+    def switch(self, branch):
+        cout('Switch to branch: {0}'.format(branch) )
+        args = ('switch', branch)
+        stdout, stderr, return_code = self.svn(args)
+        if return_code != 0:
+            raise SVNError(stderr)
+
+    def merge(self, source, reintegrate=False, interactive=False,
+              revision=None):
+        """ Выполняет команду merge
+        """
+        args = ['merge']
+        if not interactive:
+            args.append('--non-interactive')
+        if revision is not None:
+            revision = str(revision)
+            flag = '-r' if revision.find(':') else '-c'
+            args.extend([flag, revision])
+        elif reintegrate:
+            args.append('--reintegrate')
+        args.extend([source, '.'])
+        stdout, stderr, return_code = self.svn(args)
+        if return_code != 0:
+            raise SVNError(stderr)
+
     def check_collected_tasks(self, collected, tasks,
                               not_found_msg='These tasks not found in SVN log:',
                               found_msg='collected tasks:'):
@@ -199,14 +241,38 @@ class SVNHelper(object):
         if interactive:
             cerr("Commit message:")
             cerr("-" * 40)
-            for line in open(self.commit_message_filename, 'r').readlines():
-                cerr(line)
+            with open(self.commit_message_filename, 'r') as f:
+                for line in f.readlines():
+                    cerr(line)
             cerr("-" * 40)
             self.confirm_execution(args)
         cerr("Committing merge to SVN")
         stdout, stderr, return_code = self.svn(args)
         if return_code != 0:
             raise SVNError(stderr)
+
+    def reintegrate_feature(self, task_key, branch, interactive=False,
+                            dry_run=False, cleanup=True):
+        """ Мержит feature-ветку в WC и комитит изменения.
+
+        :param task_key: ключ задачи в Жире
+        :param branch: ветка, которую интегрируем
+        :param interactive: разрешает работать с вводом с консили
+        :param dry_run: запрещает коммитить изменения
+        :param cleanup: позволяет удалять feature-ветку (по умолчанию)
+        """
+        self.revert_working_copy()
+        self.svn_update()
+        commit_msg = "%s reintegrate feature '%s'\n" % (task_key, branch)
+        with open(self.commit_message_filename, 'w+') as commit_msg_file:
+            commit_msg_file.write(commit_msg)
+
+        self.merge(branch, reintegrate=True, interactive=interactive)
+        self.check_for_conflicts()
+        if not dry_run:
+            self.svn_commit(interactive)
+        if cleanup:
+            self.delete(branch, message=commit_msg)
 
     def merge_tasks(self, task_key, tasks, branch='trunk', interactive=False,
                     dry_run=False):
@@ -234,8 +300,7 @@ class SVNHelper(object):
                     continue
                 msg = self.remove_smart_commits(msg)
                 commit_msg_file.write('r%s %s %s\n' % (r, jira_task, msg))
-                args = ('merge', '--non-interactive', '-c', 'r%s' % r, source)
-                self.svn(args)
+                self.merge(source, revision=r)
             commit_msg_file.flush()
             commit_msg_file.seek(0)
             merged = []
