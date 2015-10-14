@@ -201,7 +201,7 @@ class SVNHelper(object):
             args.append('--non-interactive')
         if revision is not None:
             revision = str(revision)
-            flag = '-r' if revision.find(':') else '-c'
+            flag = '-r' if revision.find(':') >= 0 else '-c'
             args.extend([flag, revision])
         elif reintegrate:
             args.append('--reintegrate')
