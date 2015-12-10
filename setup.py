@@ -12,6 +12,7 @@ setup(
         'bin/bbt-build',
         'bin/bbt-deploy',
         'bin/bbt-integrate',
+        'bin/bbt-integrate-git',
         'bin/bbt-test',
         'bin/build-comment',
         'bin/coverage2clover',

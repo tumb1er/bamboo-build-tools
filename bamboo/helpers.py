@@ -6,6 +6,8 @@ import re
 import sys
 import os.path
 
+import six
+
 
 def cout(*lines):
     if not lines:
@@ -82,3 +84,9 @@ def chdir(dirname=None):
         yield
     finally:
         os.chdir(curdir)
+
+
+def tuple_version(version):
+    if isinstance(version, six.string_types):
+        return tuple(int(v) for v in version.split("."))
+    return version
