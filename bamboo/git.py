@@ -35,6 +35,10 @@ class GitHelper(object):
         """ название тега для финального релиза """
         return version
 
+    def remote(self, branch):
+        """ возвращает имя удаленной ветки """
+        return "%s/%s" % (self.remote_name, branch)
+
     def git(self, args, quiet=False):
         if not isinstance(args, tuple):
             args = tuple(args)
@@ -53,15 +57,10 @@ class GitHelper(object):
         return stdout
 
     @staticmethod
-    def _calc_version(version, previous=True):
+    def _calc_version(version, operator):
         version = tuple_version(version)
         if version <= tuple_version(GitHelper.FIRST_VERSION):
             raise GitError("Invalid vesion number %s" % version)
-
-        if previous:
-            operator = lambda a: a - 1
-        else:
-            operator = lambda a: a + 1
 
         new_version = list(reversed(version))
         for i, n in enumerate(new_version):
@@ -78,7 +77,7 @@ class GitHelper(object):
                              1.2.2 - 1.2.1
                              1.1.0 - 1.0.0
         """
-        return self._calc_version(version)
+        return self._calc_version(version, operator=lambda a: a - 1)
 
     def next_version(self, version):
         """ Возвращает следующую версию для релиза.
@@ -87,7 +86,18 @@ class GitHelper(object):
                              1.2.2 - 1.2.3
                              1.1.0 - 1.2.0
         """
-        return self._calc_version(version, previous=False)
+        return self._calc_version(version, operator=lambda a: a + 1)
+
+    def base_version(self, version):
+        """ Возвращает базовую версию для релиза, т.е. ту, от которой
+        ветка релиза взяла начало
+        Например: 1.0.0 - 0.0.0
+                  1.0.1 - 1.0.0
+                  1.0.2 - 1.0.0
+                  1.2.0 - 1.0.0
+                  2.1.3 - 2.1.0
+        """
+        return self._calc_version(version, operator=lambda a: 0)
 
     def check_version(self, version):
         """ Проверяет, что мы можем собирать указанную версию релиза.
@@ -104,8 +114,7 @@ class GitHelper(object):
 
         prev_version = self.previous_version(version)
         # Не можем создать релиз, если ещё не зарелизена окончательно предыдущая
-        # версия (та, на основе которой мы создаем стейбл), за исключением
-        # случаев, если это вообще первая версия
+        # версия, за исключением случаев, если это вообще первая версия
         if (prev_version != GitHelper.FIRST_VERSION and
                 not self.find_tags(self.release_tag(prev_version))):
             raise GitError("Cannot create %s release because previous "
@@ -145,29 +154,92 @@ class GitHelper(object):
         branch = self.get_stable_branch(version)
 
         if not self.git(("branch", "--list", branch)):
-            remote_branch = "%s/%s" % (self.remote_name, branch)
-            if self.git(("branch", "-r", "--list", remote_branch)):
+            if self.git(("branch", "-r", "--list", self.remote(branch))):
                 # если на сервере уже есть ветка, то будем использовать ей
-                start_point = remote_branch
+                start_point = self.remote(branch)
                 cerr("Checkout release branch %s for version %s" % (branch, version))
             else:
                 # иначе создадим ветку из релиза предыдущей версии
-                start_point = self.release_tag(self.previous_version(version))
+                start_point = self.release_tag(self.base_version(version))
                 cerr("Create release branch %s for version %s" % (branch, version))
-            import ipdb; ipdb.set_trace()
             self.git(("checkout", "-b", branch, start_point))
 
         return branch
 
-    def merge_tasks(self, task_key, tasks, stable_branch):
+    def check_task(self, branch, version):
+        """ Проверяем, можем ли мы смержить задачу в текущую версию.
+        Мы не можем мержить тикет в минор, если при мерже в минор попадут
+        какие-то другие коммиты из других версий.
+        Например:
+        1. Ветка feature начата раньше, чем сделан минор - её можно смержить
+        в минор, т.к. в него не попадут никакие коммиты из мастера, сделанные
+        не в рамках feature:
+        ---1----2------- master
+           \    \_______ minor
+            \___________ feature
+
+        2. Ветка feature начата позже, чем сделан минор - её нельзя просто так
+        смержить в минор, т.к. в него попадут все коммиты, сделанные в мастер
+        между коммитами 1 и 2, а мы не хотим их в минор
+        не в рамках feature:
+        ---1----2------- master
+           \    \_______ feature
+            \___________ minor
+
+        3. Ветка feature начата в миноре. Её можно спокойно смержить в него
+        не в рамках feature:
+        ----1--------- master
+            \_2_______ minor
+              \_______ feature
+
+        4. Ветка feature начата раньше, чем сделан минор, но уже после создания
+        минора в неё были вмержен мастер. Поэтому вмержить её в минор нельзя,
+        иначе в минор попадут коммиты, сделанные между 2 (созданием минора) и
+        3 (мержем из мастера):
+        ---1--2--3------- master
+           \__|___\______ feature
+              \__________ minor
+        5. FIXME. Ветка feature начата раньше, чем сделан минор, но вмержена в
+        мастер после создания минора. Вообще-то, её можно смержить в минор,
+        т.к. ничего лишнего в него не попадет. Но пока мы определяем эту
+        ситуацию как ошибочную, т.к. сделать проверку в этом случае сложнее.
+        Это хорошо бы исправить.
+        3 (мержем из мастера):
+        ---1--2----3------ master
+           \__|___/      feature
+              \_________ minor
+        """
+        if not self.is_minor_release(version):
+            return
+
+        # ищем общий коммит у ветки для мержа и ветки-родоночальника стейбла
+        # (для миноров - это мастер, для патчей - это минор)
+        parent_branch = self.get_stable_branch(self.base_version(version))
+        stable_branch = self.get_stable_branch(version)
+        base = self.git(("merge-base", self.remote(branch), self.remote(parent_branch))).strip()
+        self.checkout(stable_branch)
+        try:
+            self.git(("merge-base", "--is-ancestor", base, stable_branch))
+        except GitError:
+            raise GitError(
+                "Cannot merge {feature} to {version} because unexpected "
+                "commits can be merge too. You can rebase {feature} branch on "
+                "the begining of {stable} or create new branch originated "
+                "from {stable} and cherry-pick nessesary commits to it.".format(
+                feature=branch, version=version, stable=stable_branch))
+
+    def merge_tasks(self, task_key, tasks, version):
         """ Мержит задачу из ветки в нужный релиз-репозиторий
         """
         if not tasks:
             raise ValueError('No tasks requested')
 
+        stable_branch = self.get_or_create_stable(version, task=task_key)
         commit_msg = '%s merge tasks %%s' % task_key
 
         for task in tasks:
+            # проверяем, можем ли мы смержить эту таску в стейбл
+            self.check_task(task.key, version)
             self.checkout(task.key)
             self.checkout(stable_branch)
             # мержим ветку в стейбл

@@ -185,15 +185,13 @@ release_tags = []
 # Выполняем merge задач в stable без отправки на сервер
 for version, tasks in sorted(merge_plan.items(), key=lambda a: tuple_version(a[0])):
     int_task = integration_tasks[version]
-    stable_branch = git.get_or_create_stable(version, task=int_task.key,
-                                             interactive=options.interactive)
 
     try:
-        git.merge_tasks(int_task.key, tasks, stable_branch)
+        git.merge_tasks(int_task.key, tasks, version)
         tag = git.release_candidate(version)
         release_tags.append(tag)
     except GitError as e:
-        print >> sys.stderr, "Conflict found while merging to %s" % version
+        print >> sys.stderr, e
         failed = True
         continue
 
