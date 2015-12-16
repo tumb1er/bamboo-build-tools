@@ -52,8 +52,7 @@ parser.add_option("-c", "--config-file", dest="configfile",
 parser.add_option("-b", "--integration-bamboo", dest="integration",
                   default=False, action="store_true",
                   help="use only tasks assigned to bamboo for integration")
-parser.add_option("-t", "--root", dest="root", default="^",
-                  help="svn project root location")
+parser.add_option("-t", "--root", dest="root", help="git project root location")
 parser.add_option("-i", "--interactive", dest="interactive", default=False,
                   action="store_true", help="confirm actions")
 parser.add_option("-p", "--package", dest="package",
@@ -73,13 +72,15 @@ except:
     sys.exit(-1)
 
 jira = Tasks(configfile=options.configfile)
-git = GitHelper(project_key, configfile=options.configfile)
+git = GitHelper(project_key, root=options.root, configfile=options.configfile)
 builds = Builds(configfile=options.configfile)
 
 
 # Ищем задачи, подлежащие сборке
 tasks = jira.search_tasks(project_key, issue_type=ISSUE_TYPES,
                           status=ISSUE_STATUS)
+# список всех ключей задач, подлежащих сборке
+all_task_keys = [t.key for t in tasks]
 task_assignees = {}     # task-key -> assignee
 merge_plan = defaultdict(list)         # version -> task-list
 integration_tasks = {}  # version -> task-key
@@ -89,8 +90,7 @@ failed = False
 def finalize(dest_status="Integrated", exit_code=0):
     # Возвращает задачи прежним assignee, ставит статус dest_status,
     # выходит из питона.
-    for task in tasks:
-        task_key = task.key
+    for task_key in all_task_keys:
         assignee = task_assignees[task_key]
         jira.move(task_key, dest_status)
         jira.assign(task_key, assignee=assignee)
@@ -103,7 +103,7 @@ try:
     shutil.rmtree(base_dir)
 except OSError:
     pass
-git.clone(options.root, base_dir)
+git.clone(base_dir)
 os.chdir(base_dir)
 
 
@@ -207,7 +207,7 @@ for tag in release_tags:
     # Выделяем build key из job key
     build_number = build_key.split('-')[-1]
     integration_build = '%s-INT-%s' % (project_key, build_number)
-    # builds.run_plan(plan_name, ReleaseTag=tag,
-    #                 IntegrationBuild=integration_build)
+    builds.run_plan(plan_name, ReleaseTag=tag,
+                    IntegrationBuild=integration_build)
 
 finalize(dest_status="Integrated")

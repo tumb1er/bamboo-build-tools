@@ -1,29 +1,27 @@
 # coding: utf-8
-from bamboo.helpers import parse_config, tuple_version, cerr
+import shutil
 import os
 import sys
-from subprocess import Popen, PIPE
+
+from bamboo.helpers import parse_config, tuple_version, cerr, query_yes_no, cout
+from bamboo.mixins import BuildMixin
 
 
 class GitError(Exception):
     pass
 
 
-class GitHelper(object):
+class GitHelper(BuildMixin):
     """ Работа с JIRA-задачами в SVN."""
     FIRST_VERSION = "0.0.0"
-    commit_message_filename = 'commit-message.txt'
-    smart_commits = (
-        (r'\+(review\s[A-Z]+-CR(-[\d]+)?)', r'\1'),
-        (r'#(developed|reviewed)', r'\1'),
-        (r'@(\w+)', r'\1'),
-    )
 
-    def __init__(self, project_key, configfile='bamboo.cfg'):
+    def __init__(self, project_key, configfile='bamboo.cfg', root=None,
+                 temp_dir='/tmp'):
         self.project_key = project_key
         self.remote_name = "origin"
+        self.project_root = root
+        self.temp_dir = temp_dir
         self.branches_to_delete = []
-        self.repo_url = 'https://y.rutube.ru/vrepo/'
         parse_config(self, configfile)
 
     def rc_tag(self, version, build_number):
@@ -42,16 +40,12 @@ class GitHelper(object):
     def git(self, args, quiet=False):
         if not isinstance(args, tuple):
             args = tuple(args)
-        if not quiet:
-            cerr('git ' + ' '.join(
-                '"%s"' % a if ' ' in a else a for a in args))
         args = (
-            ('/usr/bin/env', 'git')
-            + args
+            ('/usr/bin/env', 'git') + args
         )
-        p = Popen(args, stdout=PIPE, stderr=PIPE, env=os.environ)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
+
+        stdout, stderr, returncode = self.execute(args, quiet)
+        if returncode != 0:
             cerr(stderr)
             raise GitError()
         return stdout
@@ -253,34 +247,34 @@ class GitHelper(object):
         stdout = self.git(("tag", "-l", pattern))
         return stdout.split()
 
-    def get_current_build_number(self, version):
-        """ Возвращает текущий номер сборки
+    def get_last_tag(self, version):
+        """ Возвращает номер последней сборки
         """
         pattern = self.rc_tag(version, "*")
         # текущий - это последний + 1
         tags = [t.replace(pattern, "") for t in self.find_tags(pattern)]
         number_tags = sorted((t for t in tags if t.isdigit()), key=int)
-        return int(number_tags[-1]) + 1 if number_tags else 1
+        return int(number_tags[-1]) if number_tags else 0
 
     def release_candidate(self, version):
-        """ Помечает тегом релиз кандидата коммит текущий коммит.
+        """ Помечает тегом релиз кандидата текущий коммит.
         """
-        tag = self.rc_tag(version, self.get_current_build_number(version))
+        tag = self.rc_tag(version, self.get_last_tag(version) + 1)
         self.git(("tag", tag))
         return tag
 
     def release(self, version, build_number):
         """ Помечает релиз-тегом указанный билд.
         """
-        rc_tag = self.rc_tag(version, self.get_current_build_number(version))
+        rc_tag = self.rc_tag(version, build_number)
         tag = self.release_tag(version)
         self.git(("tag", tag, rc_tag))
         return tag
 
-    def clone(self, repo_url, path):
+    def clone(self, path):
         """ Клонирует репозиторий по указанному пути
         """
-        self.git(("clone", repo_url, path))
+        self.git(("clone", self.project_root, path))
 
     def checkout(self, branch):
         """ Делает checkout указанной ветки
@@ -310,3 +304,47 @@ class GitHelper(object):
         """ Удаляет ветку в удаленном репозитории
         """
         self.git(("push", self.remote_name, "--delete", branch))
+
+    def build(self, release, interactive=False, build_cmd=None, terminate=False,
+              build=None, cleanup=True):
+        tag = build or '%02d' % self.get_last_tag(release)
+        package_name = '%s-%s-%s' % (self.project_key, release, tag)
+        local_path = os.path.join(self.temp_dir, package_name)
+        if os.path.exists(local_path):
+            if not interactive or query_yes_no('remove %s?' % local_path,
+                                               default='yes'):
+                shutil.rmtree(local_path)
+            else:
+                cerr('Aborted')
+                sys.exit(0)
+        self.clone(local_path)
+        self.checkout(self.rc_tag(release, build))
+        if build_cmd:
+            os.environ['PACKAGE'] = package_name
+            os.chdir(local_path)
+            cerr("Build cmd: %s" % build_cmd)
+            cerr("Package name: %s" % package_name)
+            if interactive and not query_yes_no('execute?', default='yes'):
+                cerr('Aborted')
+                return
+            args = ('/usr/bin/env', 'sh', '-c', build_cmd)
+            stdout, stderr, ret = self.execute(args)
+            cout(stdout)
+            if ret:
+                cerr(stderr)
+                sys.exit(ret)
+            if terminate:
+                if cleanup:
+                    shutil.rmtree(local_path)
+                return
+
+        archive_name = os.path.join(self.temp_dir, '%s.tgz' % package_name)
+        self.tar(archive_name, self.temp_dir, package_name, quiet=True)
+        dest = os.path.join(self.repo_url, self.project_key)
+        if not dest.endswith('/'):
+            dest += '/'
+        self.upload(archive_name, dest, interactive=interactive)
+        if cleanup:
+            cout("cleanup")
+            shutil.rmtree(local_path)
+            os.unlink(archive_name)
