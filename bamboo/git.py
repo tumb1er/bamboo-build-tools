@@ -1,5 +1,5 @@
 # coding: utf-8
-from bamboo.helpers import parse_config, tuple_version
+from bamboo.helpers import parse_config, tuple_version, cerr
 import os
 import sys
 from subprocess import Popen, PIPE
@@ -21,17 +21,17 @@ class GitHelper(object):
 
     def __init__(self, project_key, configfile='bamboo.cfg'):
         self.project_key = project_key
+        self.remote_name = "origin"
+        self.branches_to_delete = []
         self.repo_url = 'https://y.rutube.ru/vrepo/'
-        self.svn_username = 'bamboo'
-        self.svn_password = None
         parse_config(self, configfile)
 
-    def _rc_tag(self, version, build_number):
+    def rc_tag(self, version, build_number):
         """ название тега для релиз кандидата """
-        return "{version}-rc{build_number}".format(
+        return "{version}-{build_number}".format(
             version=version, build_number=build_number)
 
-    def _release_tag(self, version):
+    def release_tag(self, version):
         """ название тега для финального релиза """
         return version
 
@@ -39,8 +39,8 @@ class GitHelper(object):
         if not isinstance(args, tuple):
             args = tuple(args)
         if not quiet:
-            sys.stderr.write('git ' + ' '.join(
-                '"%s"' % a if ' ' in a else a for a in args) + '\n')
+            cerr('git ' + ' '.join(
+                '"%s"' % a if ' ' in a else a for a in args))
         args = (
             ('/usr/bin/env', 'git')
             + args
@@ -48,7 +48,7 @@ class GitHelper(object):
         p = Popen(args, stdout=PIPE, stderr=PIPE, env=os.environ)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
-            sys.stderr.write(stderr)
+            cerr(stderr)
             raise GitError()
         return stdout
 
@@ -96,21 +96,45 @@ class GitHelper(object):
 
         :param version: версия для проверки
         """
+        cerr("Checking version %s before release" % version)
+        # не можем собрать тег, если текущая версия уже зарелизена
+        if self.find_tags(self.release_tag(version)):
+            raise GitError("Cannot add features to %s version because it has "
+                           "already released" % version)
+
         prev_version = self.previous_version(version)
         # Не можем создать релиз, если ещё не зарелизена окончательно предыдущая
         # версия (та, на основе которой мы создаем стейбл), за исключением
         # случаев, если это вообще первая версия
         if (prev_version != GitHelper.FIRST_VERSION and
-                not self.find_tags(self._release_tag(prev_version))):
-            raise GitError("Cannot create %s release while %s release "
-                           "does not exist" % (version, prev_version))
+                not self.find_tags(self.release_tag(prev_version))):
+            raise GitError("Cannot create %s release because previous "
+                           "%s release does not exist" % (version, prev_version))
 
         next_version = self.next_version(version)
         # Если для следующей версии (той, что использует тот же стейбл)
         # была уже хоть одна сборка - не можем создать релиз
-        if self.find_tags(self._rc_tag(next_version, "*")):
-            raise GitError("Cannot create %s release cause %s release "
+        if self.find_tags(self.rc_tag(next_version, "*")):
+            raise GitError("Cannot create %s release because %s release "
                            "already started" % (version, next_version))
+        cerr("Checking complete")
+
+    def is_minor_release(self, version):
+        """ Определеяет минорный ли это релиз.
+        """
+        return tuple_version(version)[1:] > (0, 0)
+
+    def get_stable_branch(self, version):
+        """ Возвращает название ветки для сборки релиза
+        """
+        version = tuple_version(version)
+
+        if not self.is_minor_release(version):
+            return "master"
+        if version[-1] == 0:
+            return "minor/%d.x" % version[0]
+        else:
+            return "minor/%d.%d.x" % version[:2]
 
     def get_or_create_stable(self, version, task, interactive=False):
         """ Проверяет наличие или создает ветку, в которую будем собирать
@@ -118,20 +142,21 @@ class GitHelper(object):
 
         :return: Название ветки стейбла
         """
-        version = tuple_version(version)
-
-        if list(version[1:]) == [0, 0]:
-            return "master"
-
-        if version[-1] == 0:
-            branch = "minor/%d.x" % version[0]
-        else:
-            branch = "minor/%d.%d.x" % version[:2]
+        branch = self.get_stable_branch(version)
 
         if not self.git(("branch", "--list", branch)):
-            # если ветка не существует - создаем её из ветки предыдущего релиза
-            prev_version = self.previous_version(version)
-            self.git(("checkout", "-b", branch, self._release_tag(prev_version)))
+            remote_branch = "%s/%s" % (self.remote_name, branch)
+            if self.git(("branch", "-r", "--list", remote_branch)):
+                # если на сервере уже есть ветка, то будем использовать ей
+                start_point = remote_branch
+                cerr("Checkout release branch %s for version %s" % (branch, version))
+            else:
+                # иначе создадим ветку из релиза предыдущей версии
+                start_point = self.release_tag(self.previous_version(version))
+                cerr("Create release branch %s for version %s" % (branch, version))
+            import ipdb; ipdb.set_trace()
+            self.git(("checkout", "-b", branch, start_point))
+
         return branch
 
     def merge_tasks(self, task_key, tasks, stable_branch):
@@ -145,7 +170,10 @@ class GitHelper(object):
         for task in tasks:
             self.checkout(task.key)
             self.checkout(stable_branch)
+            # мержим ветку в стейбл
             self.git(("merge", "--no-ff", task.key, "-m", commit_msg % task.key))
+            # удаляем ветку сразу после мержа
+            self.delete_branch(task.key)
 
     def find_tags(self, pattern):
         """ Находит все теги для указанного шаблона
@@ -156,7 +184,7 @@ class GitHelper(object):
     def get_current_build_number(self, version):
         """ Возвращает текущий номер сборки
         """
-        pattern = self._rc_tag(version, "*")
+        pattern = self.rc_tag(version, "*")
         # текущий - это последний + 1
         tags = [t.replace(pattern, "") for t in self.find_tags(pattern)]
         number_tags = sorted((t for t in tags if t.isdigit()), key=int)
@@ -165,15 +193,15 @@ class GitHelper(object):
     def release_candidate(self, version):
         """ Помечает тегом релиз кандидата коммит текущий коммит.
         """
-        tag = self._rc_tag(version, self.get_current_build_number(version))
+        tag = self.rc_tag(version, self.get_current_build_number(version))
         self.git(("tag", tag))
         return tag
 
     def release(self, version, build_number):
         """ Помечает релиз-тегом указанный билд.
         """
-        rc_tag = self._rc_tag(version, self.get_current_build_number(version))
-        tag = self._release_tag(version)
+        rc_tag = self.rc_tag(version, self.get_current_build_number(version))
+        tag = self.release_tag(version)
         self.git(("tag", tag, rc_tag))
         return tag
 
@@ -188,7 +216,25 @@ class GitHelper(object):
         self.git(("checkout", branch))
 
     def push(self):
-        """ Отправляет изменения на удаленный сервер, включая все теги
+        """ Отправляет изменения на удаленный сервер, включая все теги и
+        удаление веток, если нужно
         """
         self.git(("push", "--all"))
         self.git(("push", "--tags"))
+        for branch in self.branches_to_delete:
+            self.delete_remote_branch(branch)
+        self.branches_to_delete = []
+
+    def delete_branch(self, branch, deffer_remote=True):
+        """ Удаляет ветку в локальном репе и запоминает, что её
+        """
+        self.git(("branch", "-d", branch))
+        if deffer_remote:
+            self.branches_to_delete.append(branch)
+        else:
+            self.delete_remote_branch(branch)
+
+    def delete_remote_branch(self, branch):
+        """ Удаляет ветку в удаленном репозитории
+        """
+        self.git(("push", self.remote_name, "--delete", branch))

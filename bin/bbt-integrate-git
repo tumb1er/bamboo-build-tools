@@ -89,7 +89,6 @@ failed = False
 def finalize(dest_status="Integrated", exit_code=0):
     # Возвращает задачи прежним assignee, ставит статус dest_status,
     # выходит из питона.
-    import ipdb; ipdb.set_trace()
     for task in tasks:
         task_key = task.key
         assignee = task_assignees[task_key]
@@ -115,7 +114,6 @@ for task in tasks:
 
     # Задача должна иметь только одну версию. В остальные необходимые
     # версии она будет попадать при обратном мерже
-    # FIXME Так ли это или лучше сделать несколько версий как в svn?
     if len(task.fields.fixVersions) != 1:
         print >> sys.stderr, "Task must have exactly one version. Found %s versions for %s" % (
             len(task.fields.fixVersions), task.key)
@@ -205,6 +203,7 @@ if failed:
 
 # отправляем изменения на сервер и запускаем build план
 git.push()
+
 for tag in release_tags:
     plan_name = '%s-BLD' % project_key
     # Выделяем build key из job key
