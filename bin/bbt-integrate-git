@@ -99,12 +99,7 @@ def finalize(dest_status="Integrated", exit_code=0):
 
 # чистим директорию, в которой будем собирать проект и клонируем туда реп
 base_dir = project_key
-try:
-    shutil.rmtree(base_dir)
-except OSError:
-    pass
 git.clone(base_dir)
-os.chdir(base_dir)
 
 
 for task in tasks:
@@ -189,7 +184,7 @@ for version, tasks in sorted(merge_plan.items(), key=lambda a: tuple_version(a[0
     try:
         git.merge_tasks(int_task.key, tasks, version)
         tag = git.release_candidate(version)
-        release_tags.append(tag)
+        release_tags.append((version, tag))
     except GitError as e:
         print >> sys.stderr, e
         failed = True
@@ -202,12 +197,19 @@ if failed:
 # отправляем изменения на сервер и запускаем build план
 git.push()
 
-for tag in release_tags:
+for version, tag in release_tags:
     plan_name = '%s-BLD' % project_key
-    # Выделяем build key из job key
     build_number = build_key.split('-')[-1]
     integration_build = '%s-INT-%s' % (project_key, build_number)
-    builds.run_plan(plan_name, ReleaseTag=tag,
-                    IntegrationBuild=integration_build)
+    # для всех планов запускаем билд
+    print >> sys.stderr, "Run %s" % plan_name
+    # builds.run_plan(plan_name, ReleaseTag=tag,
+    #                 IntegrationBuild=integration_build)
+
+    # для каждого минорного плана запускаем back-merge
+    if git.is_minor_release(version):
+        plan_name = "%s-BMRG" % project_key
+        print >> sys.stderr, "Run %s" % plan_name
+        # builds.run_plan(plan_name, ReleaseVersion=version)
 
 finalize(dest_status="Integrated")

@@ -46,6 +46,7 @@ class GitHelper(BuildMixin):
 
         stdout, stderr, returncode = self.execute(args, quiet)
         if returncode != 0:
+            cerr(stdout)
             cerr(stderr)
             raise GitError()
         return stdout
@@ -234,10 +235,8 @@ class GitHelper(BuildMixin):
         for task in tasks:
             # проверяем, можем ли мы смержить эту таску в стейбл
             self.check_task(task.key, version)
-            self.checkout(task.key)
-            self.checkout(stable_branch)
             # мержим ветку в стейбл
-            self.git(("merge", "--no-ff", task.key, "-m", commit_msg % task.key))
+            self.merge(task.key, stable_branch, commit_msg % task.key)
             # удаляем ветку сразу после мержа
             self.delete_branch(task.key)
 
@@ -250,9 +249,9 @@ class GitHelper(BuildMixin):
     def get_last_tag(self, version):
         """ Возвращает номер последней сборки
         """
-        pattern = self.rc_tag(version, "*")
+        pattern = self.rc_tag(version, "")
         # текущий - это последний + 1
-        tags = [t.replace(pattern, "") for t in self.find_tags(pattern)]
+        tags = [t.replace(pattern, "") for t in self.find_tags(pattern + "*")]
         number_tags = sorted((t for t in tags if t.isdigit()), key=int)
         return int(number_tags[-1]) if number_tags else 0
 
@@ -272,14 +271,26 @@ class GitHelper(BuildMixin):
         return tag
 
     def clone(self, path):
-        """ Клонирует репозиторий по указанному пути
+        """ Клонирует репозиторий по указанному пути и переходит туда
         """
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            pass
         self.git(("clone", self.project_root, path))
+        os.chdir(path)
 
     def checkout(self, branch):
         """ Делает checkout указанной ветки
         """
         self.git(("checkout", branch))
+
+    def merge(self, from_branch, to_branch, commit_msg):
+        """ Мержит одну ветку в другую
+        """
+        self.checkout(from_branch)
+        self.checkout(to_branch)
+        self.git(("merge", "--no-ff", from_branch, "-m", commit_msg))
 
     def push(self):
         """ Отправляет изменения на удаленный сервер, включая все теги и
