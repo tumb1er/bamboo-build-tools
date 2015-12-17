@@ -23,7 +23,6 @@ setup(
         'bin/svn-build',
         'bin/svn-create-feature',
         'bin/svn-merge-feature',
-        'bin/git-back-merge',
         'bin/git-release',
         'bin/task-search',
         'bin/task-versions',

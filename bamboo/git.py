@@ -21,7 +21,7 @@ class GitHelper(BuildMixin):
         self.remote_name = "origin"
         self.project_root = root
         self.temp_dir = temp_dir
-        self.branches_to_delete = []
+        self.branches_to_delete = set()
         parse_config(self, configfile)
 
     def rc_tag(self, version, build_number):
@@ -175,14 +175,12 @@ class GitHelper(BuildMixin):
 
         2. Ветка feature начата позже, чем сделан минор - её нельзя просто так
         смержить в минор, т.к. в него попадут все коммиты, сделанные в мастер
-        между коммитами 1 и 2, а мы не хотим их в минор
-        не в рамках feature:
+        между коммитами 1 и 2, а мы не хотим их в минор:
         ---1----2------- master
            \    \_______ feature
             \___________ minor
 
-        3. Ветка feature начата в миноре. Её можно спокойно смержить в него
-        не в рамках feature:
+        3. Ветка feature начата в миноре. Её можно спокойно смержить в него:
         ----1--------- master
             \_2_______ minor
               \_______ feature
@@ -194,12 +192,10 @@ class GitHelper(BuildMixin):
         ---1--2--3------- master
            \__|___\______ feature
               \__________ minor
-        5. FIXME. Ветка feature начата раньше, чем сделан минор, но вмержена в
-        мастер после создания минора. Вообще-то, её можно смержить в минор,
-        т.к. ничего лишнего в него не попадет. Но пока мы определяем эту
-        ситуацию как ошибочную, т.к. сделать проверку в этом случае сложнее.
-        Это хорошо бы исправить.
-        3 (мержем из мастера):
+        5. FIXME это пока не работает
+        Ветка feature начата раньше, чем сделан минор, но вмержена в
+        мастер после создания минора. Её можно смержить в минор,
+        т.к. ничего лишнего в него не попадет:
         ---1--2----3------ master
            \__|___/      feature
               \_________ minor
@@ -218,7 +214,7 @@ class GitHelper(BuildMixin):
         except GitError:
             raise GitError(
                 "Cannot merge {feature} to {version} because unexpected "
-                "commits can be merge too. You can rebase {feature} branch on "
+                "commits can be merged too. You can rebase {feature} branch on "
                 "the begining of {stable} or create new branch originated "
                 "from {stable} and cherry-pick nessesary commits to it.".format(
                 feature=branch, version=version, stable=stable_branch))
@@ -300,14 +296,14 @@ class GitHelper(BuildMixin):
         self.git(("push", "--tags"))
         for branch in self.branches_to_delete:
             self.delete_remote_branch(branch)
-        self.branches_to_delete = []
+        self.branches_to_delete = set()
 
     def delete_branch(self, branch, deffer_remote=True):
         """ Удаляет ветку в локальном репе и запоминает, что её
         """
         self.git(("branch", "-d", branch))
         if deffer_remote:
-            self.branches_to_delete.append(branch)
+            self.branches_to_delete.add(branch)
         else:
             self.delete_remote_branch(branch)
 

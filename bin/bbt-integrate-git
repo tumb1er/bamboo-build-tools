@@ -106,40 +106,39 @@ for task in tasks:
     # Сохраняем старых assignee и переставляем на bamboo
     task_assignees[task.key] = task.fields.assignee.name
     jira.assign(task.key, INTEGRATION_USER)
+    versions = []
 
-    # Задача должна иметь только одну версию. В остальные необходимые
-    # версии она будет попадать при обратном мерже
-    if len(task.fields.fixVersions) != 1:
-        print >> sys.stderr, "Task must have exactly one version. Found %s versions for %s" % (
-            len(task.fields.fixVersions), task.key)
-        failed = True
-        continue
+    for v in task.fields.fixVersions:
+        # Ищем только unreleased версии вида 1.0.0
+        if v.archived or v.released:
+            continue
+        version = v.name
+        if not re.match(VERSION_RX, version):
+            continue
 
-    # готовим план интеграции
-    v = task.fields.fixVersions[0]
-    # Ищем только unreleased версии вида 1.0.0
-    if v.archived or v.released:
-        continue
+        versions.append(version)
+        merge_plan[version].append(task)
 
-    version = v.name
-    if not re.match(VERSION_RX, version):
+    if not versions:
         print >> sys.stderr, "Unreleased versions not found for %s" % task.key
         failed = True
         continue
-
-    # Проверяем, что мы можем собрать релиз такой версии
-    git.check_version(version)
-
-    merge_plan[version].append(task)
-    integration_tasks[version] = None
 
 print "Merge plan:"
 pprint(dict(merge_plan))
 if failed:
     finalize(dest_status='Integration broken', exit_code=-1)
 
-# Ищем список задач на сборку
-for version in integration_tasks.keys():
+# Проверяем версии и ищем им задачи на сборку
+for version in merge_plan.keys():
+    # проверяем, что нам ничто не мешает собирать версию
+    try:
+        git.check_version(version)
+    except GitError as e:
+        print >> sys.stderr, e
+        failed = True
+        continue
+
     # только Integration Ticket, принадлежащий конкретной версии
     kwargs = {
         "issue_type": INTEGRATION_ISSUE_TYPE,
@@ -184,7 +183,7 @@ for version, tasks in sorted(merge_plan.items(), key=lambda a: tuple_version(a[0
     try:
         git.merge_tasks(int_task.key, tasks, version)
         tag = git.release_candidate(version)
-        release_tags.append((version, tag))
+        release_tags.append(tag)
     except GitError as e:
         print >> sys.stderr, e
         failed = True
@@ -197,19 +196,13 @@ if failed:
 # отправляем изменения на сервер и запускаем build план
 git.push()
 
-for version, tag in release_tags:
+for tag in release_tags:
     plan_name = '%s-BLD' % project_key
     build_number = build_key.split('-')[-1]
     integration_build = '%s-INT-%s' % (project_key, build_number)
     # для всех планов запускаем билд
     print >> sys.stderr, "Run %s" % plan_name
-    # builds.run_plan(plan_name, ReleaseTag=tag,
-    #                 IntegrationBuild=integration_build)
-
-    # для каждого минорного плана запускаем back-merge
-    if git.is_minor_release(version):
-        plan_name = "%s-BMRG" % project_key
-        print >> sys.stderr, "Run %s" % plan_name
-        # builds.run_plan(plan_name, ReleaseVersion=version)
+    builds.run_plan(plan_name, ReleaseTag=tag,
+                    IntegrationBuild=integration_build)
 
 finalize(dest_status="Integrated")
