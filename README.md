@@ -158,7 +158,7 @@ Release Management in Git
 Experimental feature!
 
 ### Workflow description
-`master1` is a branch for primary/major releases and release candidates.
+`master` is a branch for primary/major releases and release candidates.
 `minor/A.x` is a branch for minor releases and release candidates.
 `minor/A.B.x` is a branch for patch releases and release candidates.
 Every feature must be developed in feature branches named after JIRA task key. For example, task 'PROJ-123' must be developed in branch 'PROJ-123'.
