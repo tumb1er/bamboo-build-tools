@@ -12,17 +12,17 @@ class GitError(Exception):
 
 
 class GitHelper(BuildMixin):
-    """ Работа с JIRA-задачами в SVN."""
-    FIRST_VERSION = "0.0.0"
+    """ Работа с JIRA-задачами в GIT."""
 
     def __init__(self, project_key, configfile='bamboo.cfg', root=None,
-                 temp_dir='/tmp'):
+                 temp_dir='/tmp', big_bang_version='0.0.0'):
         self.project_key = project_key
         self.remote_name = "origin"
         self.project_root = root
         self.temp_dir = temp_dir
-        self.branches_to_delete = set()
+        self.big_bang_version = big_bang_version
         parse_config(self, configfile)
+        self.branches_to_delete = set()
 
     def rc_tag(self, version, build_number):
         """ название тега для релиз кандидата """
@@ -51,13 +51,12 @@ class GitHelper(BuildMixin):
             raise GitError()
         return stdout
 
-    @staticmethod
-    def _calc_version(version, operator):
-        version = tuple_version(version)
-        if version <= tuple_version(GitHelper.FIRST_VERSION):
+    def _calc_version(self, version, operator):
+        v = tuple_version(version)
+        if v <= tuple_version(self.big_bang_version):
             raise GitError("Invalid vesion number %s" % version)
 
-        new_version = list(reversed(version))
+        new_version = list(reversed(v))
         for i, n in enumerate(new_version):
             if n > 0:
                 new_version[i] = operator(n)
@@ -110,7 +109,7 @@ class GitHelper(BuildMixin):
         prev_version = self.previous_version(version)
         # Не можем создать релиз, если ещё не зарелизена окончательно предыдущая
         # версия, за исключением случаев, если это вообще первая версия
-        if (prev_version != GitHelper.FIRST_VERSION and
+        if (prev_version != self.big_bang_version and
                 not self.find_tags(self.release_tag(prev_version))):
             raise GitError("Cannot create %s release because previous "
                            "%s release does not exist" % (version, prev_version))
@@ -157,6 +156,8 @@ class GitHelper(BuildMixin):
                 # иначе создадим ветку из релиза предыдущей версии
                 start_point = self.release_tag(self.base_version(version))
                 cerr("Create release branch %s for version %s" % (branch, version))
+            # создаем локальную ветку и связываем её с удаленной. сам по себе
+            # чекаут здесь не так уже важен
             self.git(("checkout", "-b", branch, start_point))
 
         return branch

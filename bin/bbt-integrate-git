@@ -57,6 +57,10 @@ parser.add_option("-i", "--interactive", dest="interactive", default=False,
                   action="store_true", help="confirm actions")
 parser.add_option("-p", "--package", dest="package",
                   help="package name")
+parser.add_option("--big-bang-version", dest="big_bang_version", default="0.0.0",
+                  help="The Big Bang version of the project, i.e. unreleased "
+                       "version of the project init. Any release version must "
+                       "be greater than it.")
 
 
 options, args = parser.parse_args()
@@ -72,7 +76,8 @@ except:
     sys.exit(-1)
 
 jira = Tasks(configfile=options.configfile)
-git = GitHelper(project_key, root=options.root, configfile=options.configfile)
+git = GitHelper(project_key, root=options.root, configfile=options.configfile,
+                big_bang_version=options.big_bang_version)
 builds = Builds(configfile=options.configfile)
 
 
