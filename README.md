@@ -153,6 +153,41 @@ Computes stable name from version name
 With **-a** key will list major and minor stables for this version.
 
 
+Release Management in Git
+--------------------------------
+Experimental feature!
+
+### Workflow description
+`master` is a branch for primary/major releases and release candidates.
+`minor/A.x` is a branch for minor releases and release candidates.
+`minor/A.B.x` is a branch for patch releases and release candidates.
+Every feature must be developed in feature branches named after JIRA task key. For example, task 'PROJ-123' must be developed in branch 'PROJ-123'.
+
+Feature branches are merged to release branches automatically by bamboo, for that JIRA task must have all neccessary fixVersions. If you want to see a task in minor and major releases you should place it to both of this versions. 
+Feature branch will be deleted after successful integration.
+ 
+Last commit in every integrate circle is marked with <version>-<build number> tag. When release is finished, last build number will be marked with <version> tag (see git-release section below).
+
+Merging tasks is prohibited for:
+- closed release;
+- release without closed previous release (for example, you cannot create 1.0.1/1.1.0/2.0.0 while you haven't close 1.0.0 release);
+- release with started next release (for example, you cannot continue to merge tasks to 1.0.0 release if you've already started to merge tasks to 1.0.1/1.1.0/2.0.0 releases) 
+
+#### Why not use gitflow? 
+We tried, but decided that it is not fit for our purposes. We start release at the begining of the sprint. We don't have a lot of testers, so we have to test only already integrated tasks. Often we have to make minor releases with a functional features, so it's not the same as hotfixes in gitflow. 
+
+### bbt-integrate-git
+It's a complex script for integration workflow. 
+ 
+### git-release
+Mark last release candidate as final release.  
+
+#### Example:
+> git-release PROJ-123 1.0.0
+
+In this example script will mark last 1.0.0-* as 1.0.0 and commit changes with commit message started with integration task key.
+
+
 Deploy and Test Tools
 ---------------------
 
