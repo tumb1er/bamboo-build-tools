@@ -20,9 +20,6 @@ class Bamboo(JIRA):
         super(Bamboo, self).__init__(server, options, basic_auth, oauth,
                                      validate, async, logging, max_retries)
 
-
-
-
     def server_info(self):
         info = self._get_json('info')
         info['versionNumbers'] = info['version'].split('.')

@@ -1,0 +1,213 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# $Id: $
+
+# Все-в-одном для создания тега в рамках интеграции задачи
+
+# 1) ищет задачи в статусе Integrating
+# 2) берет задачи на себя
+# 3) собирает merge-plan
+# 4) мержит задачи во все stable-ветки
+# 5) при отсутствии конфликтов собирает теги
+from collections import defaultdict
+
+from optparse import OptionParser
+import os
+from pprint import pprint
+import re
+import sys
+import shutil
+from bamboo.builds import Builds
+from bamboo.git import GitHelper, GitError
+from bamboo.helpers import tuple_version
+from bamboo.tasks import Tasks
+
+# Регулярка для валидной версии
+VERSION_RX = r'^[\d]+\.[\d]+\.[\d]+$'
+
+SVN_STABLE = 'branches/stable'
+
+# тип задачи на интеграцию
+INTEGRATION_ISSUE_TYPE = "Intergration Ticket"
+
+# интегрируемые типы задач
+ISSUE_TYPES = (
+    "Development Ticket",
+    "Development Subtask",
+    "Bug Ticket",
+    "Bug Subtask"
+)
+
+# статусы задач для интеграции
+ISSUE_STATUS = ("Integrating",)
+
+# пользователь для сборки
+INTEGRATION_USER = "bamboo"
+
+parser = OptionParser(usage='%prog [options] <build_key>')
+parser.add_option("-c", "--config-file", dest="configfile",
+                  default='bamboo.cfg', help="read config from FILE",
+                  metavar="FILE")
+parser.add_option("-b", "--integration-bamboo", dest="integration",
+                  default=False, action="store_true",
+                  help="use only tasks assigned to bamboo for integration")
+parser.add_option("-t", "--root", dest="root", help="git project root location")
+parser.add_option("-i", "--interactive", dest="interactive", default=False,
+                  action="store_true", help="confirm actions")
+parser.add_option("-p", "--package", dest="package",
+                  help="package name")
+parser.add_option("--big-bang-version", dest="big_bang_version", default="0.0.0",
+                  help="The Big Bang version of the project, i.e. unreleased "
+                       "version of the project init. Any release version must "
+                       "be greater than it.")
+
+
+options, args = parser.parse_args()
+if len(args) < 1:
+    parser.print_usage()
+    sys.exit(-1)
+
+try:
+    build_key = args[0]
+    project_key = build_key.split('-')[0]
+except:
+    print >> sys.stderr, "Invalid build key (expected: PROJ-INT-123)"
+    sys.exit(-1)
+
+jira = Tasks(configfile=options.configfile)
+git = GitHelper(project_key, root=options.root, configfile=options.configfile,
+                big_bang_version=options.big_bang_version)
+builds = Builds(configfile=options.configfile)
+
+
+# Ищем задачи, подлежащие сборке
+tasks = jira.search_tasks(project_key, issue_type=ISSUE_TYPES,
+                          status=ISSUE_STATUS)
+# список всех ключей задач, подлежащих сборке
+all_task_keys = [t.key for t in tasks]
+task_assignees = {}     # task-key -> assignee
+merge_plan = defaultdict(list)         # version -> task-list
+integration_tasks = {}  # version -> task-key
+failed = False
+
+
+def finalize(dest_status="Integrated", exit_code=0):
+    # Возвращает задачи прежним assignee, ставит статус dest_status,
+    # выходит из питона.
+    for task_key in all_task_keys:
+        assignee = task_assignees[task_key]
+        jira.move(task_key, dest_status)
+        jira.assign(task_key, assignee=assignee)
+    sys.exit(exit_code)
+
+
+# чистим директорию, в которой будем собирать проект и клонируем туда реп
+base_dir = project_key
+git.clone(base_dir)
+
+
+for task in tasks:
+    # Сохраняем старых assignee и переставляем на bamboo
+    task_assignees[task.key] = task.fields.assignee.name
+    jira.assign(task.key, INTEGRATION_USER)
+    versions = []
+
+    for v in task.fields.fixVersions:
+        # Ищем только unreleased версии вида 1.0.0
+        if v.archived or v.released:
+            continue
+        version = v.name
+        if not re.match(VERSION_RX, version):
+            continue
+
+        versions.append(version)
+        merge_plan[version].append(task)
+
+    if not versions:
+        print >> sys.stderr, "Unreleased versions not found for %s" % task.key
+        failed = True
+        continue
+
+print "Merge plan:"
+pprint(dict(merge_plan))
+if failed:
+    finalize(dest_status='Integration broken', exit_code=-1)
+
+# Проверяем версии и ищем им задачи на сборку
+for version in merge_plan.keys():
+    # проверяем, что нам ничто не мешает собирать версию
+    try:
+        git.check_version(version)
+    except GitError as e:
+        print >> sys.stderr, e
+        failed = True
+        continue
+
+    # только Integration Ticket, принадлежащий конкретной версии
+    kwargs = {
+        "issue_type": INTEGRATION_ISSUE_TYPE,
+        "release": version
+    }
+    # Для особо привередливых добавляем ограничение, что задача должна
+    # стоять на bamboo
+    if options.integration:
+        kwargs.update(assignee=INTEGRATION_USER)
+    int_tasks = jira.search_tasks(project_key, **kwargs)
+    # Проверяем число задач на сборку
+    if not int_tasks:
+        print >> sys.stderr, 'No integration ticket for %s' % version
+        failed = True
+        continue
+    if len(int_tasks) > 1:
+        print >> sys.stderr, "More than one integration ticket for %s" % version
+        print "Tickets: %s" % ', '.join(t.key for t in int_tasks)
+        failed = True
+        continue
+    task = int_tasks[0]
+    integration_tasks[version] = task
+    # Переводим задачу в статус Integrating, ставим ее на bamboo
+    if task.fields.status.name != ISSUE_STATUS:
+        # При выполнении перехода на bamboo поставится автоматом
+        jira.move(task.key, 'integrating')
+    else:
+        jira.assign(task.key, INTEGRATION_USER)
+
+print "Integration tasks:"
+pprint(dict((v, t.key) for v, t in integration_tasks.items()))
+
+if failed:
+    finalize(dest_status='Integration broken', exit_code=-1)
+
+release_tags = []
+
+# Выполняем merge задач в stable без отправки на сервер
+for version, tasks in sorted(merge_plan.items(), key=lambda a: tuple_version(a[0])):
+    int_task = integration_tasks[version]
+
+    try:
+        git.merge_tasks(int_task.key, tasks, version)
+        tag = git.release_candidate(version)
+        release_tags.append(tag)
+    except GitError as e:
+        print >> sys.stderr, e
+        failed = True
+        continue
+
+if failed:
+    finalize(dest_status='Integration broken', exit_code=-1)
+
+
+# отправляем изменения на сервер и запускаем build план
+git.push()
+
+for tag in release_tags:
+    plan_name = '%s-BLD' % project_key
+    build_number = build_key.split('-')[-1]
+    integration_build = '%s-INT-%s' % (project_key, build_number)
+    # для всех планов запускаем билд
+    print >> sys.stderr, "Run %s" % plan_name
+    builds.run_plan(plan_name, ReleaseTag=tag,
+                    IntegrationBuild=integration_build)
+
+finalize(dest_status="Integrated")

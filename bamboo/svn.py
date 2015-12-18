@@ -8,13 +8,14 @@ import shutil
 from subprocess import Popen, PIPE
 import sys
 from bamboo.helpers import cout, cerr, query_yes_no, parse_config, get_stable
+from bamboo.mixins import BuildMixin
 
 
 class SVNError(Exception):
     pass
 
 
-class SVNHelper(object):
+class SVNHelper(BuildMixin):
     """ Работа с JIRA-задачами в SVN."""
 
     trunk_dir = 'trunk'
@@ -396,26 +397,6 @@ class SVNHelper(object):
             cout("cleanup")
             shutil.rmtree(local_path)
             os.unlink(archive_name)
-
-    def tar(self, archive, chdir, folder, quiet=False):
-        args = ('/usr/bin/env', 'tar', 'czf', archive, '-C', chdir, folder)
-        return self.execute(args, quiet)
-
-    def execute(self, args, quiet=False):
-        if not quiet:
-            sys.stderr.write(' '.join(
-                '"%s"' % a if ' ' in a else a for a in args[1:]) + '\n')
-        p = Popen(args, stdout=PIPE, stderr=PIPE, env=os.environ)
-        stdout, stderr = p.communicate()
-        return stdout, stderr, p.returncode
-
-    def upload(self, source, destination, quiet=False, interactive=False):
-        args = ('/usr/bin/env', 'curl', '-T', source, destination)
-        cerr("Upload command: %s" % ' '.join(args[1:]))
-        if interactive and not query_yes_no('upload file?', default='yes'):
-            cerr('Aborted')
-            return
-        return self.execute(args, quiet)
 
     def checkout(self, remote, local):
         args = ('co', remote, local)
