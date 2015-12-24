@@ -183,9 +183,9 @@ It's a complex script for integration workflow.
 Mark last release candidate as final release.  
 
 #### Example:
-> git-release PROJ-123 1.0.0
+> git-release PROJ-123
 
-In this example script will mark last 1.0.0-* as 1.0.0 and commit changes with commit message started with integration task key.
+In this example script find integration task PROJ-123 in jira and mark its fix versions as released.
 
 
 Deploy and Test Tools
