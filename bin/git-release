@@ -4,8 +4,10 @@
 # $Id: $
 from optparse import OptionParser
 import os
+import re
 import sys
 from bamboo.git import GitHelper
+from bamboo.helpers import cerr
 from bamboo.tasks import Tasks
 
 parser = OptionParser(
@@ -23,12 +25,22 @@ if len(args) < 1:
 
 int_task = args[0]
 
+m = re.match(r'([A-Z]+)-[\d]+', args[0])
+if not m:
+    cerr('invalid JIRA task key: ' + args[0])
+    sys.exit(-2)
+
 jira = Tasks(configfile=options.configfile)
 versions = jira.get_versions(int_task)
 project_key = int_task.split("-")[0]
 
+if len(versions) != 1:
+    cerr('Integration task must have only one version. %s has %s: %s' % (
+        int_task, len(versions), ", ".join(versions)))
+    sys.exit(-2)
+
+version = versions[0]
 git = GitHelper(project_key, root=options.root, configfile=options.configfile)
-for version in versions:
-    git.clone(os.path.join(git.temp_dir, "%s-release" % project_key))
-    git.release(version, git.get_last_tag(version))
+git.clone(os.path.join(git.temp_dir, "%s-release" % project_key))
+git.release(version, git.get_last_tag(version))
 git.push()
