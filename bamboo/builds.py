@@ -28,9 +28,9 @@ class Bamboo(JIRA):
 
 class Builds(object):
     def __init__(self, configfile='bamboo.cfg'):
-        self.jira_user = 'stikhonov'
-        self.jira_password = '3P2Qsd4f'
-        self.server_name = 'http://bamboo.rutube.ru:8085'
+        self.jira_user = 'login'
+        self.jira_password = 'password'
+        self.server_name = 'http://host:8085'
         parse_config(self, configfile)
         self.jira = Bamboo(server=self.server_name,
                            options={'rest_api_version': '1.0'},
